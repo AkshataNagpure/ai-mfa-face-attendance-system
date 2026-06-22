@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Login - AI Attendance System{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <h2>Login to Your Account</h2>
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div style="position: relative; display: flex; align-items: center;">
+                    <input type="password" id="password" name="password" required style="width: 100%; padding-right: 44px;">
+                    <button type="button" id="togglePassword" onclick="togglePasswordVisibility()"
+                        title="Show / Hide password"
+                        style="position: absolute; right: 0; top: 0; bottom: 0; width: 42px;
+                               background: none; border: none; cursor: pointer;
+                               display: flex; align-items: center; justify-content: center;
+                               color: var(--text-secondary, #94a3b8); font-size: 1.1rem;
+                               transition: color 0.2s;">
+                        <!-- eye icon -->
+                        <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <!-- eye-off icon (hidden by default) -->
+                        <svg id="eyeOffIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                             style="display:none;">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8
+                                     a18.45 18.45 0 0 1 5.06-5.94"/>
+                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8
+                                     a18.5 18.5 0 0 1-2.16 3.19"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div style="text-align: right; margin-bottom: 15px;">
+                <a href="#" id="forgotPasswordBtn" style="font-size: 0.9em; text-decoration: none;">Forgot Password?</a>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Login</button>
+        </form>
+        <div class="login-footer">
+            <p>Don't have an account? Contact your administrator.</p>
+            <a href="{{ url_for('home') }}">← Back to Home</a>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div id="forgotPasswordModal" class="modal">
+    <div class="modal-content" style="max-width: 400px; margin: 10% auto;">
+        <span class="close" id="closeForgotModal">&times;</span>
+        <h2 style="margin-bottom: 20px;">Forgot Password</h2>
+        
+        <!-- Step 1: Username -->
+        <div id="fpStep1">
+            <div class="form-group">
+                <label for="fpUsername">Enter your Username</label>
+                <input type="text" id="fpUsername" style="width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box;" placeholder="Username">
+            </div>
+            <button id="fpNextBtn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Next</button>
+            <div id="fpError1" class="text-danger mt-2" style="display:none; font-size: 0.9em; color: red;"></div>
+        </div>
+
+        <!-- Step 2: Admin Reset -->
+        <div id="fpStepAdmin" style="display:none;">
+            <p id="adminSecurityQuestion" style="font-weight: bold; margin-bottom: 10px;"></p>
+            <div class="form-group">
+                <label for="adminAnswer">Security Answer</label>
+                <input type="text" id="adminAnswer" style="width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box;" placeholder="Answer">
+            </div>
+            <div class="form-group" style="margin-top: 10px;">
+                <label for="adminPin">Admin PIN</label>
+                <input type="password" id="adminPin" style="width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box;" placeholder="PIN">
+            </div>
+            <div class="form-group" style="margin-top: 10px;">
+                <label for="adminNewPassword">New Password</label>
+                <input type="password" id="adminNewPassword" style="width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box;" placeholder="New Password">
+            </div>
+            <button id="fpAdminResetBtn" class="btn btn-primary" style="width: 100%; margin-top: 15px; background: #2ecc71;">Reset Password</button>
+            <div id="fpErrorAdmin" class="text-danger mt-2" style="display:none; font-size: 0.9em; color: red;"></div>
+        </div>
+
+        <!-- Step 2: Employee Success -->
+        <div id="fpStepEmployee" style="display:none; text-align: center; padding: 20px 0;">
+            <p style="color: green; font-size: 1.2em; font-weight: bold; margin-bottom: 10px;">Reset Link Sent!</p>
+            <p>Please check your email for the password reset link.</p>
+            <button id="fpDoneBtn" class="btn btn-secondary" style="margin-top: 20px;">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('forgotPasswordModal');
+    const btn = document.getElementById('forgotPasswordBtn');
+    const span = document.getElementById('closeForgotModal');
+
+    // UI Steps
+    const step1 = document.getElementById('fpStep1');
+    const stepAdmin = document.getElementById('fpStepAdmin');
+    const stepEmployee = document.getElementById('fpStepEmployee');
+
+    // Reset Modal State
+    function resetModal() {
+        step1.style.display = 'block';
+        stepAdmin.style.display = 'none';
+        stepEmployee.style.display = 'none';
+        document.getElementById('fpUsername').value = '';
+        document.getElementById('adminAnswer').value = '';
+        document.getElementById('adminPin').value = '';
+        document.getElementById('adminNewPassword').value = '';
+        document.getElementById('fpError1').style.display = 'none';
+        document.getElementById('fpErrorAdmin').style.display = 'none';
+    }
+
+    btn.onclick = (e) => {
+        e.preventDefault();
+        // Prefill username if typed in login
+        document.getElementById('fpUsername').value = document.getElementById('username').value;
+        resetModal();
+        modal.style.display = 'block';
+    };
+
+    span.onclick = () => modal.style.display = 'none';
+    window.onclick = (e) => {
+        if (e.target == modal) modal.style.display = 'none';
+    };
+    document.getElementById('fpDoneBtn').onclick = () => modal.style.display = 'none';
+
+    // Next Button - Check Role
+    document.getElementById('fpNextBtn').onclick = async () => {
+        const username = document.getElementById('fpUsername').value.trim();
+        const errorDiv = document.getElementById('fpError1');
+        const nextBtn = document.getElementById('fpNextBtn');
+        
+        if (!username) {
+            errorDiv.textContent = 'Please enter a username';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        errorDiv.style.display = 'none';
+        nextBtn.disabled = true;
+        nextBtn.textContent = 'Checking...';
+
+        try {
+            const res = await fetch('/api/forgot-password/check-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                if (data.is_admin) {
+                    window.location.href = `/admin/forgot-password?username=${encodeURIComponent(username)}`;
+                } else {
+                    step1.style.display = 'none';
+                    stepEmployee.style.display = 'block';
+                }
+            } else {
+                errorDiv.textContent = data.message || 'Error finding user';
+                errorDiv.style.display = 'block';
+            }
+        } catch (e) {
+            errorDiv.textContent = 'Network error';
+            errorDiv.style.display = 'block';
+        } finally {
+            nextBtn.disabled = false;
+            nextBtn.textContent = 'Next';
+        }
+    };
+
+    // Admin Reset Password Button
+    document.getElementById('fpAdminResetBtn').onclick = async () => {
+        const username = document.getElementById('fpUsername').value.trim();
+        const answer = document.getElementById('adminAnswer').value.trim();
+        const pin = document.getElementById('adminPin').value.trim();
+        const new_password = document.getElementById('adminNewPassword').value;
+        const errorDiv = document.getElementById('fpErrorAdmin');
+        const resetBtn = document.getElementById('fpAdminResetBtn');
+
+        if (!answer || !pin || !new_password) {
+            errorDiv.textContent = 'Please fill all fields';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        errorDiv.style.display = 'none';
+        resetBtn.disabled = true;
+        resetBtn.textContent = 'Resetting...';
+
+        try {
+            const res = await fetch('/api/forgot-password/reset-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, answer, pin, new_password })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                alert('Password reset successful! You can now login.');
+                modal.style.display = 'none';
+            } else {
+                errorDiv.textContent = data.message || 'Error resetting password';
+                errorDiv.style.display = 'block';
+            }
+        } catch (e) {
+            errorDiv.textContent = 'Network error';
+            errorDiv.style.display = 'block';
+        } finally {
+            resetBtn.disabled = false;
+            resetBtn.textContent = 'Reset Password';
+        }
+    };
+    // ---- Show / Hide Password Toggle ----
+    window.togglePasswordVisibility = function () {
+        const input   = document.getElementById('password');
+        const eyeOn   = document.getElementById('eyeIcon');
+        const eyeOff  = document.getElementById('eyeOffIcon');
+        const btn     = document.getElementById('togglePassword');
+
+        if (input.type === 'password') {
+            input.type      = 'text';
+            eyeOn.style.display  = 'none';
+            eyeOff.style.display = 'inline';
+            btn.style.color = 'var(--primary-color, #6366f1)';
+        } else {
+            input.type      = 'password';
+            eyeOn.style.display  = 'inline';
+            eyeOff.style.display = 'none';
+            btn.style.color = 'var(--text-secondary, #94a3b8)';
+        }
+    };
+});
+</script>
+{% endblock %}
+

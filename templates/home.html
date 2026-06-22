@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Home - AI Attendance System{% endblock %}
+
+{% block content %}
+<div class="home-container">
+    <div class="hero-section">
+        <h1>Welcome to Smart Face Attendance System</h1>
+        <p class="subtitle">AI-Based MultiFactor Authentication System</p>
+    </div>
+
+    <div class="action-buttons single-action">
+        <div class="button-card">
+            <div class="icon"></div>
+            <h3>Attendance</h3>
+            <p>Mark your daily attendance</p>
+            <button class="btn btn-primary" onclick="openAttendanceOptionsModal()">Attendance</button>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Options Modal -->
+<div id="attendanceOptionsModal" class="modal">
+    <div class="modal-content" style="text-align: center;">
+        <span class="close" onclick="closeAttendanceOptionsModal()">&times;</span>
+        <h2>Select Action</h2>
+        <p>Choose your attendance action for today</p>
+        <div class="attendance-options-grid">
+            <button class="btn btn-primary" onclick="openCameraModal('in')">Mark In</button>
+            <button class="btn btn-warning" onclick="openCameraModal('break_out')">Break Out</button>
+            <button class="btn btn-info" onclick="openCameraModal('break_in')">Break In</button>
+            <button class="btn btn-secondary" onclick="openCameraModal('out')">Mark Out</button>
+        </div>
+        <div class="timing-info mt-3">
+            <small>Working Hours: 09:00 AM – 06:00 PM &nbsp;|&nbsp; Lunch Break: 12:00 PM – 01:00 PM</small>
+        </div>
+    </div>
+</div>
+
+<!-- Reusable Camera Modal -->
+<div id="cameraModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeCameraModal()">&times;</span>
+        <h2 id="modalTitle">Attendance Action</h2>
+        <div class="camera-container" style="position: relative;">
+            <video id="attendanceVideo" autoplay playsinline
+                style="width: 100%; height: auto; border-radius: 12px;"></video>
+            <canvas id="faceMeshCanvas"
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+            <canvas id="attendanceCanvas" style="display: none;"></canvas>
+        </div>
+        <div class="emotion-display" id="attendanceEmotion"></div>
+        <button class="btn btn-primary" id="captureBtn" onclick="captureAndProcess()">Capture & Confirm</button>
+        <div id="attendanceResult" class="result-message"></div>
+    </div>
+</div>
+
+<style>
+    .attendance-options-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .btn-warning {
+        background-color: #f39c12;
+        color: white;
+    }
+
+    .btn-info {
+        background-color: #3498db;
+        color: white;
+    }
+
+    .mt-3 {
+        margin-top: 1rem;
+    }
+</style>
+
+<!-- MediaPipe Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
+
+<script src="{{ url_for('static', filename='js/home.js') }}"></script>
+{% endblock %}

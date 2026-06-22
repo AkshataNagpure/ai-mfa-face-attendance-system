@@ -1,0 +1,716 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Admin Dashboard</h1>
+        <div class="admin-actions">
+            <a href="{{ url_for('register_employee') }}" class="btn btn-primary">Register Employee</a>
+        </div>
+    </div>
+
+<style>
+@media (min-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+    .full-width-card {
+        grid-column: span 3 !important;
+    }
+    .double-width-card {
+        grid-column: span 2 !important;
+    }
+    .single-width-card {
+        grid-column: span 1 !important;
+    }
+}
+</style>
+
+    <div class="dashboard-grid">
+        <!-- Today's Overview -->
+        <div class="dashboard-card today-overview-card double-width-card">
+            <h2>Today's Overview</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">{{ total_employees | default(0) }}</div>
+                    <div class="stat-label">Total Employees</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ today_present | default(0) }}</div>
+                    <div class="stat-label">Present Today</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ today_absent | default(0) }}</div>
+                    <div class="stat-label">Absent Today</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 😊 Emotion Trends -->
+        <div class="dashboard-card single-width-card">
+            <h2>Emotion Trends (Last 7 Days)</h2>
+            {% if emotion_trends.overall_emotions %}
+            <canvas id="emotionTrendChart"></canvas>
+            <div class="emotion-summary">
+                {% for emotion, count in emotion_trends.overall_emotions.items() %}
+                <div class="emotion-item">
+                    <span class="emotion-name">{{ emotion }}</span>
+                    <span class="emotion-count">{{ count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>No emotion data available</p>
+            {% endif %}
+        </div>
+
+        <!-- 📋 All Employees -->
+        <div class="dashboard-card double-width-card">
+            <h2>All Employees</h2>
+            <div class="employee-list-vertical">
+                {% if employees %}
+                    {% for employee in employees %}
+                    <div class="employee-list-item" data-employee-id="{{ employee.id }}" onclick="viewEmployeeDetails(this.dataset.employeeId)">
+                        <div class="employee-avatar">
+                            {% if employee.image_url %}
+                                <img src="{{ employee.image_url }}" alt="{{ employee.name }}">
+                            {% else %}
+                                <div class="avatar-placeholder">{{ employee.name[0] }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="employee-details-summary">
+                            <div class="emp-name">{{ employee.name }}</div>
+                            <div class="emp-meta">{{ employee.department }} | {{ employee.email }}</div>
+                            <div class="emp-today-attendance">
+                                <span>In: <strong>{{ employee.today_attendance.mark_in }}</strong></span> | 
+                                <span>B.Out: <strong>{{ employee.today_attendance.break_out }}</strong></span> | 
+                                <span>B.In: <strong>{{ employee.today_attendance.break_in }}</strong></span> | 
+                                <span>Out: <strong>{{ employee.today_attendance.mark_out }}</strong></span> | 
+                                <span>Emotion: <strong>{{ employee.today_attendance.emotion }}</strong></span>
+                            </div>
+                        </div>
+                        <div class="employee-list-action">
+                            <span class="view-details-link">View Details →</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No employees registered</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 🔮 Predictive Attendance -->
+        <div class="dashboard-card single-width-card">
+            <h2>Predictive Analysis (Past 30 Days)</h2>
+
+            {% if predicted_absences %}
+            <div class="prediction-table-container">
+                <table class="attendance-table">
+                    <thead>
+                        <tr>
+                            <th>Employee Name</th>
+                            <th>Department</th>
+                            <th>Risk Level</th>
+                            <th>Risk Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pred in predicted_absences %}
+                        <tr>
+                            <td>{{ pred.employee_name }}</td>
+                            <td>{{ pred.department }}</td>
+                            <td>
+                                {% if pred.risk_score > 0.7 %}
+                                    <span class="risk-badge high">High</span>
+                                {% elif pred.risk_score > 0.5 %}
+                                    <span class="risk-badge medium">Medium</span>
+                                {% else %}
+                                    <span class="risk-badge low">Low</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ "%.0f"|format(pred.risk_score * 100) }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mt-2">No predictions available</p>
+            {% endif %}
+        </div>
+
+        <!-- 📅 Attendance Report by Duration -->
+        <div class="dashboard-card double-width-card">
+            <h2>Attendance Report by Duration</h2>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
+                <!-- Left Side: Search Form & Table -->
+                <div style="flex: 2; min-width: 300px;">
+                    <form method="get" action="{{ url_for('admin_dashboard') }}">
+                        <div class="form-group mb-2" style="display: flex; gap: 10px;">
+                            <div style="flex: 1;">
+                                <label>Start Date:</label>
+                                <input type="date" name="start_date" value="{{ start_date }}" class="form-control" required />
+                            </div>
+                            <div style="flex: 1;">
+                                <label>End Date:</label>
+                                <input type="date" name="end_date" value="{{ end_date }}" class="form-control" required />
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Search</button>
+                    </form>
+
+                    {% if attendance_report %}
+                    <div class="attendance-report-table mt-3">
+                        <div class="table-responsive">
+                            <table class="attendance-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Department</th>
+                                        <th>Present Days</th>
+                                        <th>Absent Days</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for emp in attendance_report %}
+                                    <tr>
+                                        <td>{{ emp.name }}</td>
+                                        <td>{{ emp.department }}</td>
+                                        <td>{{ emp.present_days }}</td>
+                                        <td>{{ emp.absent_days }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mt-3">Select a date range to view attendance report.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Right Side: Overall Statistics Chart -->
+                <div style="flex: 1; min-width: 250px; display: flex; flex-direction: column; align-items: center; border-left: 1px solid var(--border-color); padding-left: 20px; margin-top: 10px;">
+                    <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--text-primary); text-align: center; margin-bottom: 15px;">Overall Statistics</h3>
+                    <div style="width: 100%; max-width: 220px;">
+                        <canvas id="statsChart"
+                            data-total-employees="{{ total_employees }}"
+                            data-present-count="{{ present_count }}"
+                            data-absent-count="{{ absent_count }}"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ⏰ Punctuality Analytics -->
+        <div class="dashboard-card single-width-card">
+            <h2>Punctuality Analytics</h2>
+            {% if punctuality_data %}
+            <div class="punctuality-table-container">
+                <table class="attendance-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Punctuality Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in punctuality_data %}
+                        <tr>
+                            <td>{{ data.employee_name }}</td>
+                            <td>{{ data.department }}</td>
+                            <td>{{ "%.0f"|format(data.punctuality_rate * 100) }}% On Time</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No data available</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Floating TrackHub AI Chat Widget -->
+<div id="trackhubWidget" class="trackhub-widget">
+    <!-- Floating Trigger Button -->
+    <button id="trackhubTrigger" class="trackhub-trigger" onclick="toggleTrackHub()">
+        💬
+    </button>
+
+    <!-- Floating Chat Window -->
+    <div id="trackhubWindow" class="trackhub-window">
+        <div class="trackhub-header">
+            <h3>🤖 TrackHub Assistant</h3>
+            <button class="trackhub-close" onclick="toggleTrackHub()">&times;</button>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input-container">
+            <input type="text" id="chatInput" placeholder="Ask me anything..." class="chat-input">
+            <button onclick="sendChatMessage()" class="btn btn-primary">Ask</button>
+        </div>
+    </div>
+</div>
+
+<!-- Face Image Modal -->
+<div id="faceImagesModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeFaceImagesModal()">&times;</span>
+        <h2>Add Face Images</h2>
+        <form id="faceImagesForm" enctype="multipart/form-data">
+            <input type="hidden" id="userIdInput" name="user_id">
+            <div class="form-group">
+                <label>Upload Face Images (at least 5-10 images)</label>
+                <input type="file" name="face_images" multiple accept="image/*" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Upload & Train</button>
+        </form>
+        <div id="faceImagesResult" class="result-message"></div>
+    </div>
+</div>
+
+<!-- Employee Details Modal -->
+<div id="employeeDetailsModal" class="modal">
+    <div class="modal-content modal-lg">
+        <span class="close" onclick="closeEmployeeDetailsModal()">&times;</span>
+        <div class="employee-detail-header">
+            <div class="detail-avatar" id="detailAvatar"></div>
+            <div class="detail-title">
+                <h2 id="detailName">Employee Name</h2>
+                <p id="detailDept" class="dept-badge">Department</p>
+            </div>
+        </div>
+        
+        <div class="detail-grid">
+            <div class="detail-section" id="profileInfoSection">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">Profile Info</h3>
+                    <button class="btn btn-sm btn-primary" id="editProfileBtn" onclick="toggleEditProfile(true)" style="padding: 4px 10px; font-size: 0.8rem;">Edit Profile</button>
+                </div>
+                
+                <!-- View Mode -->
+                <div id="profileViewMode" class="info-list">
+                    <p><strong>Full Name:</strong> <span id="detailFullName"></span></p>
+                    <p><strong>Username:</strong> <span id="detailUsername"></span></p>
+                    <p><strong>Email:</strong> <span id="detailEmail"></span></p>
+                    <p><strong>Mobile:</strong> <span id="detailMobile"></span></p>
+                    <p><strong>Department:</strong> <span id="detailDeptText"></span></p>
+                </div>
+
+                <!-- Edit Mode -->
+                <form id="profileEditForm" style="display: none;" onsubmit="saveProfileEdits(event)" enctype="multipart/form-data">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 2px;">Full Name</label>
+                            <input type="text" id="editName" name="name" required style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; width: 100%; font-size: 13px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 2px;">Username</label>
+                            <input type="text" id="editUsername" name="username" required style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; width: 100%; font-size: 13px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 2px;">Email</label>
+                            <input type="email" id="editEmail" name="email" required style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; width: 100%; font-size: 13px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 2px;">Mobile</label>
+                            <input type="text" id="editMobile" name="mobile" style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; width: 100%; font-size: 13px;">
+                            <div id="editMobileMessage" style="display:none; font-size: 10px; margin-top: 2px;"></div>
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 2px;">Department</label>
+                            <input type="text" id="editDept" name="department" required style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; width: 100%; font-size: 13px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 2px;">Update Photo</label>
+                            <input type="file" id="editPhoto" name="profile_pic" accept="image/*" style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; width: 100%; font-size: 12px;">
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                            <button type="submit" class="btn btn-sm btn-primary" style="padding: 4px 10px; font-size: 0.8rem;">Save</button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleEditProfile(false)" style="padding: 4px 10px; font-size: 0.8rem;">Cancel</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="detail-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">Attendance Summary</h3>
+                    <select id="summaryMonthSelect" class="form-select form-select-sm" style="width: auto;" onchange="updateMonthlySummary()">
+                        {% for m in available_months %}
+                            <option value="{{ m.month }}-{{ m.year }}">{{ m.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="stats-mini-grid">
+                    <div class="mini-stat present-stat">
+                        <div class="mini-stat-val" id="detailPresent">0</div>
+                        <div class="mini-stat-label">Present</div>
+                        <div class="stat-sub-info">
+                            <span>Full: <b id="detailFullDay">0</b></span>
+                            <span>Half: <b id="detailHalfDay">0</b></span>
+                        </div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-val" id="detailAbsent">0</div>
+                        <div class="mini-stat-label">Absent</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-val" id="detailTotal">0</div>
+                        <div class="mini-stat-label">Working Days</div>
+                    </div>
+                </div>
+                <div class="stats-mini-grid" style="margin-top: 10px;">
+                    <div class="mini-stat">
+                        <div class="mini-stat-val" id="detailWorkingHours">0 sec</div>
+                        <div class="mini-stat-label">Working Time</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-val" id="detailOvertimeHours" style="color: #e74c3c;">0 sec</div>
+                        <div class="mini-stat-label">Overtime</div>
+                    </div>
+                </div>
+                <div class="percentage-container" style="text-align: center; margin-top: 10px; padding: 10px; background: rgba(99, 102, 241, 0.1); border-radius: 8px;">
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Monthly Attendance</div>
+                    <div id="detailPercentage" style="font-size: 1.5rem; font-weight: 800; color: var(--primary-color);">0%</div>
+                </div>
+                <canvas id="detailAttendanceChart"></canvas>
+            </div>
+        </div>
+
+        <div class="detail-grid">
+            <div class="detail-section">
+                <h3>Weekly Emotion Trend</h3>
+                <canvas id="detailEmotionChart"></canvas>
+            </div>
+            
+            <div class="detail-section">
+                <h3>Email Logs</h3>
+                <div id="detailEmailLogs" class="mini-list"></div>
+            </div>
+        </div>
+
+        <!-- 📊 Detailed Attendance Report (New Section) -->
+        <div class="detail-section mt-4" style="grid-column: span 2;">
+            <h3>Detailed Attendance Report</h3>
+            <div class="report-controls" style="margin-bottom: 1rem;">
+                <label for="detailReportDateSelect" style="font-weight:bold; display:block; margin-bottom:0.5rem;">Select Date:</label>
+                <select id="detailReportDateSelect" class="form-control" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;" onchange="fetchEmployeeDetailedReport()">
+                    <option value="">-- Select a Date --</option>
+                    {% for dt in attendance_dates %}
+                        <option value="{{ dt }}">{{ dt }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div id="detailAttendanceReportResult" class="report-result-area" style="display: none; margin-top: 15px;">
+                <div class="report-badges" id="detailReportBadges" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <!-- Badges injected here -->
+                </div>
+                
+                <div class="report-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="report-box" style="background: rgba(15, 23, 42, 0.4); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"><strong>In:</strong> <span id="dr_in">-</span></div>
+                    <div class="report-box" style="background: rgba(15, 23, 42, 0.4); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"><strong>Out:</strong> <span id="dr_out">-</span></div>
+                    <div class="report-box" style="background: rgba(15, 23, 42, 0.4); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"><strong>Break Out:</strong> <span id="dr_bout">-</span></div>
+                    <div class="report-box" style="background: rgba(15, 23, 42, 0.4); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"><strong>Break In:</strong> <span id="dr_bin">-</span></div>
+                </div>
+                
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid var(--border-color);">
+                
+                <div class="report-metrics" style="display: flex; justify-content: space-around; background: rgba(15, 23, 42, 0.6); padding: 20px 10px; border-radius: 12px; text-align: center; border: 1px solid var(--border-color);">
+                    <div class="metric">
+                        <div class="metric-val" id="dr_wh" style="font-size: 1.6rem; font-weight: 800; color: var(--primary-color);">0 sec</div>
+                        <div class="metric-label" style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Working Time</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-val" id="dr_bd" style="font-size: 1.4rem; font-weight: bold; color: #2c3e50;">0 sec</div>
+                        <div class="metric-label" style="font-size: 0.8rem; color: #7f8c8d; text-transform: uppercase;">Break Duration</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-val" id="dr_ot" style="font-size: 1.4rem; font-weight: bold; color: #e74c3c;">0 sec</div>
+                        <div class="metric-label" style="font-size: 0.8rem; color: #7f8c8d; text-transform: uppercase;">Overtime</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="detailAttendanceReportEmpty" class="report-empty-area" style="display: none; margin-top: 15px; color: var(--danger-color); font-style: italic; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.2);">
+                No attendance record found for this date.
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn btn-danger" id="deleteEmployeeBtn">Delete Employee</button>
+        </div>
+    </div>
+</div>
+
+<script id="emotionTrendsData" type="application/json">{{ emotion_trends | tojson }}</script>
+<script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
+
+<!-- ✅ Styling for Tables -->
+<style>
+.attendance-report-table, .punctuality-table-container {
+    margin-top: 10px;
+    max-height: 350px;
+    overflow-y: auto;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.4);
+    padding: 15px;
+    border: 1px solid var(--border-color);
+}
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    text-align: left;
+}
+.attendance-table th, .attendance-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+.attendance-table thead {
+    background-color: rgba(15, 23, 42, 0.6);
+    font-weight: 800;
+    color: var(--text-primary);
+}
+.attendance-table tbody tr:hover {
+    background-color: rgba(99, 102, 241, 0.05);
+}
+.section-header {
+    font-weight: bold;
+    font-size: 16px;
+    margin: 15px 0 8px;
+}
+.present-section .section-header {
+    color: #2ecc71;
+}
+.absent-section .section-header {
+    color: #e74c3c;
+}
+
+/* 📋 Vertical Employee List Styles */
+.employee-list-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+.employee-list-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.employee-list-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    border-color: #3498db;
+}
+.employee-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: 15px;
+    flex-shrink: 0;
+    border: 2px solid #f0f0f0;
+}
+.employee-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #3498db;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 20px;
+}
+.employee-details-summary {
+    flex-grow: 1;
+}
+.emp-name {
+    font-weight: bold;
+    font-size: 16px;
+    color: #2c3e50;
+}
+.emp-meta {
+    font-size: 13px;
+    color: #7f8c8d;
+}
+.emp-today-attendance {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px dashed var(--border-color);
+}
+.emp-today-attendance span {
+    white-space: nowrap;
+}
+.emp-today-attendance strong {
+    color: var(--text-primary);
+}
+.view-details-link {
+    font-size: 13px;
+    color: #3498db;
+    font-weight: bold;
+}
+
+/* 🪟 Detailed Modal Styles */
+.modal-lg {
+    max-width: 800px;
+}
+.employee-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+}
+.detail-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 15px;
+    overflow: hidden;
+    border: 3px solid #3498db;
+}
+.detail-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.detail-title h2 {
+    margin: 0;
+    font-size: 28px;
+}
+.dept-badge {
+    display: inline-block;
+    background: rgba(99, 102, 241, 0.2);
+    color: var(--primary-color);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 5px;
+}
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.detail-section {
+    background: rgba(15, 23, 42, 0.4);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+.detail-section h3 {
+    margin-top: 0;
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+}
+.info-list p {
+    margin: 8px 0;
+}
+.stats-mini-grid {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+.mini-stat {
+    flex: 1;
+    background: rgba(30, 41, 59, 0.5);
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid var(--border-color);
+}
+.mini-stat-val {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+.mini-stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.mini-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+.mini-item {
+    background: rgba(15, 23, 42, 0.6);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+.mini-item-meta {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+.modal-footer {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+</style>
+{% endblock %}
+
+
+
+<style>
+/* 🔮 Predictive Attendance Table */
+.prediction-table-container {
+    margin-top: 10px;
+    max-height: 300px; /* auto-scroll area */
+    overflow-y: auto;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+}
+
+.risk-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+}
+.risk-badge.high { background-color: #e74c3c; }     /* red */
+.risk-badge.medium { background-color: #f1c40f; }  /* yellow */
+.risk-badge.low { background-color: #2ecc71; }     /* green */
+</style>
