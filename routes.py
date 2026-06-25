@@ -995,6 +995,21 @@ def register_routes(app):
             # Populate status strings for the db fields
             set_attendance_statuses(att)
 
+        # Classify any completed but unclassified records from previous days
+        unclassified = Attendance.query.filter(
+            Attendance.date < today,
+            Attendance.mark_out_time.isnot(None),
+            Attendance.work_type.is_(None)
+        ).all()
+        for att in unclassified:
+            wh = att.working_hours or 0.0
+            if wh >= 8.0:
+                att.work_type = 'full_day'
+            elif wh >= 4.0:
+                att.work_type = 'half_day'
+            else:
+                att.work_type = 'short_day'
+
         db.session.commit()
 
     @app.route('/admin/dashboard')
@@ -1141,6 +1156,9 @@ def register_routes(app):
             if not att or not att.mark_in_time or att.status == 'absent':
                 continue
             
+            if att.date == today:
+                continue
+
             # Short Day logic:
             is_short = (
                 att.mark_in_time is not None and
@@ -1453,6 +1471,9 @@ def register_routes(app):
             if not att or not att.mark_in_time or att.status == 'absent':
                 continue
             
+            if att.date == today:
+                continue
+
             # Short Day logic:
             is_short = (
                 att.mark_in_time is not None and
@@ -1566,6 +1587,9 @@ def register_routes(app):
             overtime = att.overtime_hours or 0.0
             total_working_hours += working_hours
             total_overtime_hours += overtime
+            
+            if att.date == today:
+                continue
 
             # Short Day logic:
             is_short = (
@@ -1959,7 +1983,7 @@ def register_routes(app):
                     attendance.status = 'present'
                 else:
                     arrival_status = "Late Entry"
-                    attendance.status = 'late'
+                    attendance.status = 'present'
 
                 attendance.mark_in_status = arrival_status
 
@@ -2153,17 +2177,12 @@ def register_routes(app):
                         attendance.overtime_hours = 0.0
 
                 # Work Type Classification for completed sessions
-                if net_working_hours >= 8.0:
-                    attendance.work_type = 'full_day'
-                elif net_working_hours >= 4.0:
-                    attendance.work_type = 'half_day'
-                else:
-                    # Less than 4 hours worked => short day (status stays 'present')
-                    attendance.work_type = 'short_day'
+                # Classification is deferred until 12 AM (auto_finalize_attendance)
+                if net_working_hours < 4.0:
                     attendance.status = 'present'
 
                 current_time = attendance.mark_out_time.strftime('%I:%M %p')
-                status_label = (attendance.work_type or '').replace("_", " ").title()
+                status_label = "Present"
 
                 # Mark Out departure status
                 _mo_h = attendance.mark_out_time.hour
