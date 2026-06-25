@@ -1,7 +1,7 @@
 from flask_mail import Message
 from flask import current_app
 from extensions import mail
-from models import EmailLog, db
+from models import db
 from datetime import datetime
 
 def send_email(to, subject, body, user_id=None):
@@ -15,35 +15,9 @@ def send_email(to, subject, body, user_id=None):
         )
         
         mail.send(msg)
-        
-        # Log email
-        if user_id:
-            email_log = EmailLog(
-                user_id=user_id,
-                email_to=to,
-                subject=subject,
-                body=body,
-                status='sent'
-            )
-            db.session.add(email_log)
-            db.session.commit()
-        
         return True
     except Exception as e:
         print(f"Error sending email: {e}")
-        
-        # Log failed email
-        if user_id:
-            email_log = EmailLog(
-                user_id=user_id,
-                email_to=to,
-                subject=subject,
-                body=body,
-                status='failed'
-            )
-            db.session.add(email_log)
-            db.session.commit()
-        
         return False
 
 def send_mark_in_notification(user, attendance_time):

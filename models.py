@@ -29,7 +29,6 @@ class User(UserMixin, db.Model):
     # Relationships
     attendances = db.relationship('Attendance', backref='user', lazy=True)
     face_encodings = db.relationship('FaceEncoding', backref='user', lazy=True)
-    notifications = db.relationship('Notification', backref='user', lazy=True)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -43,6 +42,7 @@ class User(UserMixin, db.Model):
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    username = db.Column(db.String(80))
     date = db.Column(db.Date, nullable=False)
     mark_in_time = db.Column(db.DateTime)
     break_out_time = db.Column(db.DateTime)
@@ -50,18 +50,22 @@ class Attendance(db.Model):
     mark_out_time = db.Column(db.DateTime)
     status = db.Column(db.String(20), default='present')  # present, absent, late
     work_type = db.Column(db.String(20)) # full_day, half_day
-    emotion = db.Column(db.String(50))  # legacy: last-saved emotion (kept for backward compatibility)
     # Per-event emotion tracking
     mark_in_emotion = db.Column(db.String(50))   # emotion at mark-in
     break_out_emotion = db.Column(db.String(50)) # emotion at break-out
     break_in_emotion = db.Column(db.String(50))  # emotion at break-in
     mark_out_emotion = db.Column(db.String(50))  # emotion at mark-out
-    location = db.Column(db.String(100))
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     is_spoof = db.Column(db.Boolean, default=False)
-    net_working_hours = db.Column(db.Float, default=0.0)
+    working_hours = db.Column(db.Float, default=0.0)
     overtime_hours = db.Column(db.Float, default=0.0)
+    mark_in_status = db.Column(db.String(50))
+    break_out_status = db.Column(db.String(50))
+    break_in_status = db.Column(db.String(50))
+    mark_out_status = db.Column(db.String(50))
+    overtime_recorded = db.Column(db.Integer, default=0)
+    approval_status = db.Column(db.String(20), nullable=True, default=None)
     break_in_auto_generated = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -73,78 +77,73 @@ class IdempotencyLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class FaceEncoding(db.Model):
+    __tablename__ = 'face_encodings'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     encoding_path = db.Column(db.String(255), nullable=False)
     image_path = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class Notification(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    message = db.Column(db.Text)
-    type = db.Column(db.String(50))  # email, system, attendance
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-class EmailLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    email_to = db.Column(db.String(120), nullable=False)
-    subject = db.Column(db.String(200))
-    body = db.Column(db.Text)
-    status = db.Column(db.String(20))  # sent, failed
-    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-
 def create_database_views(database):
     """Create reporting database views if they do not exist."""
     try:
+        # Drop all views first
+        database.session.execute(database.text("DROP VIEW IF EXISTS employee_attendance_report"))
+        database.session.execute(database.text("DROP VIEW IF EXISTS employee_notification_report"))
+        database.session.execute(database.text("DROP VIEW IF EXISTS email_activity_report"))
+        database.session.execute(database.text("DROP VIEW IF EXISTS email_report"))
+        
+        # Create allowed VIEW only: email_report
         database.session.execute(database.text("""
-            CREATE VIEW IF NOT EXISTS employee_attendance_report AS
+            CREATE VIEW email_report AS
             SELECT 
                 u.name AS employee_name,
-                u.department AS department,
-                a.date AS date,
-                a.mark_in_time AS mark_in_time,
-                a.break_out_time AS break_out_time,
-                a.break_in_time AS break_in_time,
-                a.mark_out_time AS mark_out_time,
-                a.net_working_hours AS net_working_hours,
-                a.overtime_hours AS overtime_hours,
-                a.status AS status,
-                a.work_type AS work_type
+                u.email AS email_address,
+                'Marked In Successfully - ' || datetime(a.mark_in_time) AS subject,
+                'sent' AS status,
+                a.mark_in_time AS sent_time
             FROM attendance a
-            JOIN user u ON a.user_id = u.id;
-        """))
-        database.session.execute(database.text("""
-            CREATE VIEW IF NOT EXISTS employee_notification_report AS
+            JOIN user u ON a.user_id = u.id
+            WHERE a.mark_in_time IS NOT NULL
+
+            UNION ALL
+
             SELECT 
                 u.name AS employee_name,
-                n.title AS notification_title,
-                n.message AS notification_message,
-                n.type AS type,
-                n.is_read AS read_status,
-                n.created_at AS created_date
-            FROM notification n
-            JOIN user u ON n.user_id = u.id;
-        """))
-        database.session.execute(database.text("""
-            CREATE VIEW IF NOT EXISTS email_activity_report AS
+                u.email AS email_address,
+                'Break Out Successfully - ' || datetime(a.break_out_time) AS subject,
+                'sent' AS status,
+                a.break_out_time AS sent_time
+            FROM attendance a
+            JOIN user u ON a.user_id = u.id
+            WHERE a.break_out_time IS NOT NULL
+
+            UNION ALL
+
             SELECT 
                 u.name AS employee_name,
-                el.email_to AS email_address,
-                el.subject AS subject,
-                el.status AS status,
-                el.sent_at AS sent_time
-            FROM email_log el
-            JOIN user u ON el.user_id = u.id;
+                u.email AS email_address,
+                'Break In Successfully - ' || datetime(a.break_in_time) AS subject,
+                'sent' AS status,
+                a.break_in_time AS sent_time
+            FROM attendance a
+            JOIN user u ON a.user_id = u.id
+            WHERE a.break_in_time IS NOT NULL
+
+            UNION ALL
+
+            SELECT 
+                u.name AS employee_name,
+                u.email AS email_address,
+                'Marked Out Successfully - ' || datetime(a.mark_out_time) AS subject,
+                'sent' AS status,
+                a.mark_out_time AS sent_time
+            FROM attendance a
+            JOIN user u ON a.user_id = u.id
+            WHERE a.mark_out_time IS NOT NULL;
         """))
         database.session.commit()
-        print("✓ Database views verified/created")
+        print("Database views verified/created successfully.")
     except Exception as e:
         database.session.rollback()
         print(f"Error creating views: {e}")
-
-

@@ -1,7 +1,7 @@
 
 from flask import render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
-from models import db, User, Attendance, Notification, EmailLog, FaceEncoding, IdempotencyLog
+from models import db, User, Attendance, FaceEncoding, IdempotencyLog
 from datetime import datetime, date, timedelta
 from face_recognition_module import FaceRecognitionSystem
 from emotion_detection import EmotionDetection
@@ -81,7 +81,7 @@ employee_insights = EmployeeInsights()
 # ---------------- DASHBOARD HELPER FUNCTION -----------------
 def get_ai_response(prompt, user, role='employee'):
     from datetime import date, datetime, timedelta
-    from models import db, User, Attendance, EmailLog
+    from models import db, User, Attendance
     
     # Normalize prompt
     def normalize_text(text):
@@ -176,7 +176,7 @@ def get_ai_response(prompt, user, role='employee'):
             
             return {
                 "success": True, 
-                "response": f"📊 **Today's Attendance Summary:**\n- **Total Active Employees**: {total_active}\n- **Present**: {present_count}\n- **Absent**: {absent_count}\n- **Late Check-ins**: {late_count}"
+                "response": f" **Today's Attendance Summary:**\n- **Total Active Employees**: {total_active}\n- **Present**: {present_count}\n- **Absent**: {absent_count}\n- **Late Check-ins**: {late_count}"
             }
             
         # 4. What is today’s attendance status of the company?
@@ -197,7 +197,7 @@ def get_ai_response(prompt, user, role='employee'):
                 
             return {
                 "success": True,
-                "response": f"🏢 The overall attendance status of the company today is **{status}** ({rate:.1f}% attendance rate). **{present} present** and **{absent} absent** out of {total_active} employees."
+                "response": f" The overall attendance status of the company today is **{status}** ({rate:.1f}% attendance rate). **{present} present** and **{absent} absent** out of {total_active} employees."
             }
             
         # 5. Show attendance between two dates
@@ -209,7 +209,7 @@ def get_ai_response(prompt, user, role='employee'):
             absent = sum(1 for r in records if r.status == 'absent')
             return {
                 "success": True,
-                "response": f"📅 **Attendance Report (Past 7 days: {start_date} to {today_dt}):**\n- **Present records**: {present}\n- **Absent records**: {absent}\n*(Tip: You can use the 'Attendance Report by Duration' card on the admin dashboard to specify a custom date range!)*"
+                "response": f" **Attendance Report (Past 7 days: {start_date} to {today_dt}):**\n- **Present records**: {present}\n- **Absent records**: {absent}\n*(Tip: You can use the 'Attendance Report by Duration' card on the admin dashboard to specify a custom date range!)*"
             }
             
         # 6. What is this week’s attendance report?
@@ -220,7 +220,7 @@ def get_ai_response(prompt, user, role='employee'):
             absent = sum(1 for r in records if r.status == 'absent')
             return {
                 "success": True,
-                "response": f"📅 **This Week's Attendance Report (Starting {start_of_week} to {today_dt}):**\n- **Present check-ins**: {present}\n- **Absent days**: {absent}"
+                "response": f" **This Week's Attendance Report (Starting {start_of_week} to {today_dt}):**\n- **Present check-ins**: {present}\n- **Absent days**: {absent}"
             }
             
         # 7. Show monthly attendance summary
@@ -231,7 +231,7 @@ def get_ai_response(prompt, user, role='employee'):
             absent = sum(1 for r in records if r.status == 'absent')
             return {
                 "success": True,
-                "response": f"📅 **Monthly Attendance Summary ({today_dt.strftime('%B %Y')}):**\n- **Total Present check-ins**: {present}\n- **Total Absent records**: {absent}"
+                "response": f" **Monthly Attendance Summary ({today_dt.strftime('%B %Y')}):**\n- **Total Present check-ins**: {present}\n- **Total Absent records**: {absent}"
             }
             
         # 8. How many employees were present in last 7 days?
@@ -241,7 +241,7 @@ def get_ai_response(prompt, user, role='employee'):
             unique_emp_ids = set(r.user_id for r in records)
             return {
                 "success": True,
-                "response": f"👥 In the last 7 days, there were **{len(unique_emp_ids)} unique employees present** in the office."
+                "response": f" In the last 7 days, there were **{len(unique_emp_ids)} unique employees present** in the office."
             }
             
         # 9. Show details of employee [Name]
@@ -260,7 +260,7 @@ def get_ai_response(prompt, user, role='employee'):
                 return {"success": True, "response": f"Employee '{emp_name}' was not found in the database. Please verify the name."}
             return {
                 "success": True,
-                "response": f"👤 **Employee Details - {emp.name}:**\n- **Name**: {emp.name}\n- **Username**: {emp.username}\n- **Email**: {emp.email}\n- **Mobile**: {emp.mobile or 'N/A'}\n- **Department**: {emp.department or 'N/A'}\n- **Status**: {'Active' if emp.is_active else 'Inactive'}"
+                "response": f" **Employee Details - {emp.name}:**\n- **Name**: {emp.name}\n- **Username**: {emp.username}\n- **Email**: {emp.email}\n- **Mobile**: {emp.mobile or 'N/A'}\n- **Department**: {emp.department or 'N/A'}\n- **Status**: {'Active' if emp.is_active else 'Inactive'}"
             }
             
         # 10. How many days was [Name] present this month?
@@ -298,7 +298,7 @@ def get_ai_response(prompt, user, role='employee'):
                 name = emp.name if emp else "Unknown"
                 status_str = f"{r.status.capitalize()} ({r.work_type.replace('_', ' ').capitalize() if r.work_type else 'Present'})" if r.status != 'absent' else "Absent"
                 history_lines.append(f"- **{r.date}**: {name} - {status_str}")
-            return {"success": True, "response": "📜 **Recent Attendance History (Last 5 records):**\n" + "\n".join(history_lines)}
+            return {"success": True, "response": " **Recent Attendance History (Last 5 records):**\n" + "\n".join(history_lines)}
             
         # 13. Who has highest attendance this month?
         if "highest attendance this month" in p or "highest attendance" in p:
@@ -312,7 +312,7 @@ def get_ai_response(prompt, user, role='employee'):
             best_user_id = max(counts, key=counts.get)
             best_user = User.query.get(best_user_id)
             if best_user:
-                return {"success": True, "response": f"🏆 **{best_user.name}** has the highest attendance this month with **{counts[best_user_id]} present days**."}
+                return {"success": True, "response": f" **{best_user.name}** has the highest attendance this month with **{counts[best_user_id]} present days**."}
             return {"success": True, "response": "Unable to calculate highest attendance."}
             
         # 14. Who worked more than 8 hours today?
@@ -326,7 +326,7 @@ def get_ai_response(prompt, user, role='employee'):
                     if emp:
                         overachievers.append(f"- **{emp.name}** ({fmt_hours(wh)})")
             if overachievers:
-                return {"success": True, "response": "⏱️ **Worked more than 8 hours today:**\n" + "\n".join(overachievers)}
+                return {"success": True, "response": " **Worked more than 8 hours today:**\n" + "\n".join(overachievers)}
             return {"success": True, "response": "No employees have worked more than 8 hours today yet."}
             
         # 15. Who did overtime today?
@@ -341,7 +341,7 @@ def get_ai_response(prompt, user, role='employee'):
                         ot_val = wh - 8.0
                         overtime_list.append(f"- **{emp.name}**: Overtime of {fmt_hours(ot_val)} (Total: {fmt_hours(wh)})")
             if overtime_list:
-                return {"success": True, "response": "⏱️ **Employees with overtime today:**\n" + "\n".join(overtime_list)}
+                return {"success": True, "response": " **Employees with overtime today:**\n" + "\n".join(overtime_list)}
             return {"success": True, "response": "No employees did overtime today."}
             
         # 16. Who came late today?
@@ -355,7 +355,7 @@ def get_ai_response(prompt, user, role='employee'):
                         check_in_time = att.mark_in_time.strftime('%I:%M:%S %p')
                         late_list.append(f"- **{emp.name}** (Checked in late at {check_in_time})")
             if late_list:
-                return {"success": True, "response": "⏰ **Late arrivals today:**\n" + "\n".join(late_list)}
+                return {"success": True, "response": " **Late arrivals today:**\n" + "\n".join(late_list)}
             return {"success": True, "response": "Everyone checked in on time today!"}
             
         # 17. Who is most punctual employee?
@@ -375,7 +375,7 @@ def get_ai_response(prompt, user, role='employee'):
             best_user_id = max(rates, key=rates.get)
             best_user = User.query.get(best_user_id)
             if best_user:
-                return {"success": True, "response": f"⭐ The most punctual employee this month is **{best_user.name}** with **{rates[best_user_id]*100:.0f}%** on-time check-ins."}
+                return {"success": True, "response": f" The most punctual employee this month is **{best_user.name}** with **{rates[best_user_id]*100:.0f}%** on-time check-ins."}
             return {"success": True, "response": "Unable to calculate punctuality statistics."}
             
         # 18. Who has incomplete session today?
@@ -387,7 +387,7 @@ def get_ai_response(prompt, user, role='employee'):
                 if emp:
                     incomplete_list.append(f"- **{emp.name}**")
             if incomplete_list:
-                return {"success": True, "response": "⚠️ **Employees with incomplete sessions today (Checked-in but not Checked-out):**\n" + "\n".join(incomplete_list)}
+                return {"success": True, "response": " **Employees with incomplete sessions today (Checked-in but not Checked-out):**\n" + "\n".join(incomplete_list)}
             return {"success": True, "response": "No employees have incomplete sessions today."}
             
         # 19. Who missed break-in today?
@@ -399,7 +399,7 @@ def get_ai_response(prompt, user, role='employee'):
                 if emp:
                     missed_list.append(f"- **{emp.name}** (Went out on break at {att.break_out_time.strftime('%I:%M %p')} but didn't mark break-in)")
             if missed_list:
-                return {"success": True, "response": "⚠️ **Employees who missed break-in today:**\n" + "\n".join(missed_list)}
+                return {"success": True, "response": " **Employees who missed break-in today:**\n" + "\n".join(missed_list)}
             return {"success": True, "response": "No employees missed break-in today."}
             
         # 20. Show attendance statistics for this month
@@ -413,7 +413,7 @@ def get_ai_response(prompt, user, role='employee'):
             
             return {
                 "success": True,
-                "response": f"📊 **Monthly Attendance Statistics ({today_dt.strftime('%B %Y')}):**\n- **Total Records Logged**: {total_days}\n- **Present Marks**: {present_cnt}\n- **Absent Marks**: {absent_cnt}\n- **Late Check-ins**: {late_cnt}"
+                "response": f" **Monthly Attendance Statistics ({today_dt.strftime('%B %Y')}):**\n- **Total Records Logged**: {total_days}\n- **Present Marks**: {present_cnt}\n- **Absent Marks**: {absent_cnt}\n- **Late Check-ins**: {late_cnt}"
             }
 
         # Check greetings for Admin
@@ -481,7 +481,7 @@ def get_ai_response(prompt, user, role='employee'):
             may_records = [r for r in all_records if r.date.month == 5 and r.mark_in_time and r.status != 'absent']
             dates_list = [r.date.strftime('%B %d, %Y') for r in may_records]
             if dates_list:
-                return {"success": True, "response": f"🗓️ **Your present dates in May:**\n" + "\n".join(f"- {d}" for d in dates_list)}
+                return {"success": True, "response": f" **Your present dates in May:**\n" + "\n".join(f"- {d}" for d in dates_list)}
             return {"success": True, "response": "You don't have any present attendance records in May."}
             
         # 5. On which days was I absent?
@@ -496,7 +496,7 @@ def get_ai_response(prompt, user, role='employee'):
                 if d.weekday() != 6 and d not in present_dates:  # exclude Sunday Holiday
                     absent_dates.append(d.strftime('%b %d, %Y'))
             if absent_dates:
-                return {"success": True, "response": f"❌ **Your absent working days this month:**\n" + "\n".join(f"- {ad}" for ad in absent_dates)}
+                return {"success": True, "response": f" **Your absent working days this month:**\n" + "\n".join(f"- {ad}" for ad in absent_dates)}
             return {"success": True, "response": "You haven't been absent on any working days this month! Excellent job!"}
             
         # 6. Show my attendance history
@@ -508,7 +508,7 @@ def get_ai_response(prompt, user, role='employee'):
             for r in records:
                 status_str = f"{r.status.capitalize()} ({r.work_type.replace('_', ' ').capitalize() if r.work_type else 'Present'})" if r.status != 'absent' else "Absent"
                 history_lines.append(f"- **{r.date}**: {status_str}")
-            return {"success": True, "response": "📜 **Your Attendance History (Last 10 records):**\n" + "\n".join(history_lines)}
+            return {"success": True, "response": " **Your Attendance History (Last 10 records):**\n" + "\n".join(history_lines)}
             
         # 7. Show weekly attendance report
         if "show weekly attendance report" in p or "weekly attendance report" in p:
@@ -516,7 +516,7 @@ def get_ai_response(prompt, user, role='employee'):
             records = Attendance.query.filter_by(user_id=user.id).filter(Attendance.date >= start_of_week, Attendance.date <= today_dt).all()
             present = sum(1 for r in records if r.mark_in_time and r.status != 'absent')
             absent = sum(1 for r in records if r.status == 'absent')
-            return {"success": True, "response": f"📅 **Your Weekly Attendance Report (Starting {start_of_week} to {today_dt}):**\n- **Present Days**: {present}\n- **Absent Days**: {absent}"}
+            return {"success": True, "response": f" **Your Weekly Attendance Report (Starting {start_of_week} to {today_dt}):**\n- **Present Days**: {present}\n- **Absent Days**: {absent}"}
             
         # 8. Am I present today?
         if "am i present today" in p:
@@ -609,29 +609,47 @@ def get_ai_response(prompt, user, role='employee'):
         # 18. What is my emotion today?
         if "my emotion today" in p or "emotion today" in p:
             att = Attendance.query.filter_by(user_id=user.id, date=today_dt).first()
-            if att and att.emotion:
-                return {"success": True, "response": f"Your detected emotion today during check-in was **{att.emotion.capitalize()}**."}
+            if att and att.mark_in_emotion:
+                return {"success": True, "response": f"Your detected emotion today during check-in was **{att.mark_in_emotion.capitalize()}**."}
             return {"success": True, "response": "No emotion data recorded for you today."}
             
         # 19. Show my weekly mood trend
         if "show my mood trend" in p or "weekly mood trend" in p:
             start_date = today_dt - timedelta(days=7)
             records = Attendance.query.filter_by(user_id=user.id).filter(Attendance.date >= start_date, Attendance.date <= today_dt).all()
-            emotions = [r.emotion for r in records if r.emotion]
+            emotions = []
+            for r in records:
+                if r:
+                    for emo in (r.mark_in_emotion, r.break_out_emotion, r.break_in_emotion, r.mark_out_emotion):
+                        if emo and emo != 'not recorded':
+                            emotions.append(emo.lower())
             if not emotions:
                 return {"success": True, "response": "No emotion data recorded for you in the past 7 days."}
             counts = {}
             for emo in emotions:
                 counts[emo] = counts.get(emo, 0) + 1
             trend_lines = [f"- **{emo.capitalize()}**: {cnt} times" for emo, cnt in counts.items()]
-            return {"success": True, "response": "😊 **Your Weekly Mood Trend:**\n" + "\n".join(trend_lines)}
+            return {"success": True, "response": " **Your Weekly Mood Trend:**\n" + "\n".join(trend_lines)}
             
         # 20. Was my attendance email sent successfully?
         if "attendance email sent successfully" in p or "email sent successfully" in p:
-            latest_email = EmailLog.query.filter_by(user_id=user.id).order_by(EmailLog.sent_at.desc()).first()
+            latest_email = db.session.execute(
+                db.text("SELECT subject, status, sent_time FROM email_report WHERE email_address = :email ORDER BY sent_time DESC LIMIT 1"),
+                {'email': user.email}
+            ).fetchone()
             if latest_email:
-                status_emoji = "✅" if latest_email.status == 'sent' else "❌"
-                return {"success": True, "response": f"{status_emoji} Your last attendance email ('{latest_email.subject}') was sent successfully at **{latest_email.sent_at.strftime('%Y-%m-%d %I:%M %p')}**."}
+                status_emoji = "" if latest_email[1] == 'sent' else ""
+                sent_time_str = latest_email[2]
+                if isinstance(sent_time_str, str):
+                    try:
+                        date_str = sent_time_str.split('.')[0]
+                        dt = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+                        sent_time_formatted = dt.strftime('%Y-%m-%d %I:%M %p')
+                    except Exception:
+                        sent_time_formatted = sent_time_str
+                else:
+                    sent_time_formatted = sent_time_str.strftime('%Y-%m-%d %I:%M %p') if sent_time_str else 'N/A'
+                return {"success": True, "response": f"{status_emoji} Your last attendance email ('{latest_email[0]}') was sent successfully at **{sent_time_formatted}**."}
             return {"success": True, "response": "No attendance emails have been sent to you yet."}
 
         # Check greetings for Employee
@@ -857,21 +875,126 @@ def register_routes(app):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
     # ---------------- ADMIN DASHBOARD -----------------
+    def set_attendance_statuses(att):
+        # 1. Mark In
+        if att.mark_in_time and not att.mark_in_status:
+            _h, _m, _s = att.mark_in_time.hour, att.mark_in_time.minute, att.mark_in_time.second
+            _tot = _h * 3600 + _m * 60 + _s
+            if _tot < 9 * 3600:
+                att.mark_in_status = "Early Entry"
+            elif _tot <= 9 * 3600 + 15 * 60:
+                att.mark_in_status = "on time entry"
+            else:
+                att.mark_in_status = "Late Entry"
+
+        # 2. Break Out
+        if att.break_out_time and not att.break_out_status:
+            _h, _m, _s = att.break_out_time.hour, att.break_out_time.minute, att.break_out_time.second
+            _tot = _h * 3600 + _m * 60 + _s
+            if _tot < 12 * 3600:
+                att.break_out_status = "Early Break"
+            elif _tot <= 12 * 3600 + 15 * 60:
+                att.break_out_status = "On time Break"
+            else:
+                att.break_out_status = "Late Break"
+
+        # 3. Break In
+        if att.break_in_time and not att.break_in_status:
+            _h, _m, _s = att.break_in_time.hour, att.break_in_time.minute, att.break_in_time.second
+            _tot = _h * 3600 + _m * 60 + _s
+            
+            break_duration_hours = 0.0
+            if att.break_out_time:
+                break_duration_hours = (att.break_in_time - att.break_out_time).total_seconds() / 3600.0
+                
+            if break_duration_hours > 1.0:
+                att.break_in_status = "Long Break"
+            else:
+                if _tot < 13 * 3600:
+                    att.break_in_status = "early Break return"
+                elif _tot <= 13 * 3600 + 15 * 60:
+                    att.break_in_status = "On time Break retuen"
+                else:
+                    att.break_in_status = "late Break return"
+
+        # 4. Mark Out
+        if att.mark_out_time and not att.mark_out_status:
+            _h, _m, _s = att.mark_out_time.hour, att.mark_out_time.minute, att.mark_out_time.second
+            _tot = _h * 3600 + _m * 60 + _s
+            if _tot < 18 * 3600:
+                att.mark_out_status = "Early Departure"
+            elif _tot <= 18 * 3600 + 15 * 60:
+                att.mark_out_status = "on time Departure"
+            else:
+                att.mark_out_status = "Late Departure"
+
+    # ---------------- ADMIN DASHBOARD -----------------
     def auto_finalize_attendance():
         from datetime import date
         today = date.today()
-        # Find records from previous days that are incomplete
+        # Find records from previous days that are incomplete and not yet finalized
         incomplete = Attendance.query.filter(
             Attendance.date < today,
             Attendance.mark_in_time.isnot(None),
-            Attendance.status != 'absent' # Don't re-process already absent ones
+            Attendance.mark_out_time.is_(None),
+            Attendance.status != 'incomplete_session',
+            Attendance.status != 'absent'
         ).all()
         
         for att in incomplete:
-            if not att.mark_out_time:
-                # NEW RULE: Mark missing Out as "Half Day (Incomplete Session)"
-                att.status = 'Incomplete Session'
-                att.work_type = 'half_day'
+            # Scenario 3: Mark In + Break Out + Break In (no Mark Out)
+            if att.mark_in_time and att.break_out_time and att.break_in_time:
+                att.status = 'incomplete_session'
+                att.work_type = 'admin_approval'
+                diff_seconds = (att.break_out_time - att.mark_in_time).total_seconds()
+                wh = max(0.0, diff_seconds / 3600.0)
+                if att.date.weekday() == 6:  # Sunday: all hours = overtime
+                    att.working_hours = 0.0
+                    att.overtime_hours = wh
+                else:
+                    if wh > 8.0:
+                        att.working_hours = 8.0
+                        att.overtime_hours = wh - 8.0
+                    else:
+                        att.working_hours = wh
+                        att.overtime_hours = 0.0
+                att.approval_status = 'pending'
+            # Scenario 2: Mark In + Break Out only (no Break In, no Mark Out)
+            elif att.mark_in_time and att.break_out_time:
+                att.status = 'incomplete_session'
+                diff_seconds = (att.break_out_time - att.mark_in_time).total_seconds()
+                wh = max(0.0, diff_seconds / 3600.0)
+                if att.date.weekday() == 6:  # Sunday: all hours = overtime
+                    att.working_hours = 0.0
+                    att.overtime_hours = wh
+                else:
+                    if wh > 8.0:
+                        att.working_hours = 8.0
+                        att.overtime_hours = wh - 8.0
+                    else:
+                        att.working_hours = wh
+                        att.overtime_hours = 0.0
+                if wh >= 8.0:
+                    att.work_type = 'full_day'
+                    att.approval_status = 'approved'
+                elif wh >= 4.0:
+                    att.work_type = 'half_day'
+                    att.approval_status = 'approved'
+                else:
+                    # Less than 4 hours — needs admin decision (could be absent)
+                    att.work_type = 'admin_approval'
+                    att.approval_status = 'pending'
+            # Scenario 1: Mark In only (no Break Out, no Break In, no Mark Out)
+            elif att.mark_in_time:
+                att.status = 'incomplete_session'
+                att.work_type = 'admin_approval'
+                att.working_hours = 0.0
+                att.overtime_hours = 0.0
+                att.approval_status = 'pending'
+
+            # Populate status strings for the db fields
+            set_attendance_statuses(att)
+
         db.session.commit()
 
     @app.route('/admin/dashboard')
@@ -937,21 +1060,25 @@ def register_routes(app):
                 if face_encoding and face_encoding.image_path:
                     image_url = url_for('uploaded_file', filename=os.path.basename(face_encoding.image_path))
             
-            # Fetch today's attendance
-            today_att = next((a for a in attendances if a.user_id == emp.id and a.date == today), None)
+            # Fetch today's attendance from the already-fetched today_atts list
+            # (today_atts is always scoped to today, independent of the date range filter)
+            today_att = next((a for a in today_atts if a.user_id == emp.id), None)
             
-            # Default label if no marking
-            default_label = 'Sunday' if today.weekday() == 6 else 'Awaiting'
-            
+            # Most recent emotion: prefer the latest event recorded
+            recent_emotion = '-'
+            if today_att:
+                for emo_field in (today_att.mark_out_emotion, today_att.break_in_emotion,
+                                  today_att.break_out_emotion, today_att.mark_in_emotion):
+                    if emo_field and emo_field.strip().lower() not in ('', 'none', 'null', 'not recorded'):
+                        recent_emotion = emo_field.strip().capitalize()
+                        break
+
             att_info = {
-                'mark_in': today_att.mark_in_time.strftime('%I:%M %p') if today_att and today_att.mark_in_time else default_label,
-                'break_out': today_att.break_out_time.strftime('%I:%M %p') if today_att and today_att.break_out_time else default_label,
-                'break_in': today_att.break_in_time.strftime('%I:%M %p') if today_att and today_att.break_in_time else default_label,
-                'mark_out': today_att.mark_out_time.strftime('%I:%M %p') if today_att and today_att.mark_out_time else default_label,
-                'emotion': (
-                    (today_att.mark_out_emotion or today_att.break_in_emotion or today_att.break_out_emotion or today_att.mark_in_emotion or today_att.emotion or 'N/A').capitalize()
-                    if today_att else 'N/A'
-                )
+                'mark_in': today_att.mark_in_time.strftime('%I:%M %p') if today_att and today_att.mark_in_time else '-',
+                'break_out': today_att.break_out_time.strftime('%I:%M %p') if today_att and today_att.break_out_time else '-',
+                'break_in': today_att.break_in_time.strftime('%I:%M %p') if today_att and today_att.break_in_time else '-',
+                'mark_out': today_att.mark_out_time.strftime('%I:%M %p') if today_att and today_att.mark_out_time else '-',
+                'emotion': recent_emotion
             }
             
             employees_with_images.append({
@@ -1004,37 +1131,44 @@ def register_routes(app):
         # Calculate stats
         today = date.today()
         all_attendances = Attendance.query.filter_by(user_id=user.id).all()
-        total_present = sum(1 for att in all_attendances if att.mark_in_time and att.status != 'absent')
+        total_present = sum(1 for att in all_attendances if att and att.mark_in_time and att.status != 'absent')
         
-        # Calculate Full/Half day based on timing logic
+        # Calculate Full/Half/Short day based on timing logic
         total_full_day = 0
         total_half_day = 0
+        total_short_day = 0
         for att in all_attendances:
-            if att.status == 'absent' or not att.mark_in_time or not att.mark_out_time:
-                if att.mark_in_time and att.status != 'absent': # Present but didn't mark out yet or ever
-                    total_half_day += 1
+            if not att or not att.mark_in_time or att.status == 'absent':
                 continue
-                
-            is_full = True
-            # Rule 1: Late check-in (after 09:00 AM)
-            if att.mark_in_time.hour > 9 or (att.mark_in_time.hour == 9 and att.mark_in_time.minute > 0):
-                is_full = False
-            # Rule 2: Early check-out (before 18:00 / 6 PM)
-            if att.mark_out_time.hour < 18:
-                is_full = False
-            # Rule 3: Break adherence (must take at least 60-min lunch)
-            if not att.break_out_time or not att.break_in_time:
-                is_full = False
+            
+            # Short Day logic:
+            is_short = (
+                att.mark_in_time is not None and
+                att.mark_out_time is not None and
+                att.break_out_time is not None and
+                att.break_in_time is not None and
+                (att.working_hours or 0.0) < 4.0
+            )
+            
+            if is_short:
+                total_short_day += 1
+            elif att.approval_status == 'approved':
+                if att.work_type == 'full_day':
+                    total_full_day += 1
+                elif att.work_type == 'half_day':
+                    total_half_day += 1
+            elif att.work_type == 'admin_approval' and att.approval_status == 'pending':
+                pass
             else:
-                break_dur = (att.break_in_time - att.break_out_time).total_seconds() / 60
-                if break_dur < 60:  # Must be at least 60 mins
-                    is_full = False
-
-            if is_full: total_full_day += 1
-            else: total_half_day += 1
+                wh = att.working_hours or 0.0
+                if wh >= 8.0:
+                    total_full_day += 1
+                else:
+                    total_half_day += 1
         
-        if all_attendances:
-            first_day = min(att.date for att in all_attendances)
+        valid_attendances = [att for att in all_attendances if att]
+        if valid_attendances:
+            first_day = min(att.date for att in valid_attendances)
         else:
             first_day = today
         
@@ -1049,15 +1183,38 @@ def register_routes(app):
         except Exception:
             emotion_counts = {}
             for att in all_attendances:
-                if att.emotion:
-                    emotions = [e.strip().lower() for e in att.emotion.split(',')]
-                    for emotion in emotions:
-                        emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
+                if att:
+                    for emo in (att.mark_in_emotion, att.break_out_emotion, att.break_in_emotion, att.mark_out_emotion):
+                        if emo and emo != 'not recorded':
+                            emotion_counts[emo.lower()] = emotion_counts.get(emo.lower(), 0) + 1
         
-        notifications = Notification.query.filter_by(user_id=user.id) \
-            .order_by(Notification.created_at.desc()).limit(5).all()
-        email_logs = EmailLog.query.filter_by(user_id=user.id) \
-            .order_by(EmailLog.sent_at.desc()).all()
+        notifications = []
+        
+        # Query from email_report view
+        email_rows = db.session.execute(
+            db.text("SELECT subject, status, sent_time FROM email_report WHERE email_address = :email ORDER BY sent_time DESC"),
+            {'email': user.email}
+        ).fetchall()
+        
+        email_logs = []
+        for row in email_rows:
+            sent_time_val = row[2]
+            if isinstance(sent_time_val, str):
+                try:
+                    date_str = sent_time_val.split('.')[0]
+                    dt = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    dt = datetime.utcnow()
+            else:
+                dt = sent_time_val or datetime.utcnow()
+            
+            class DummyLog:
+                def __init__(self, subject, status, sent_at):
+                    self.subject = subject
+                    self.status = status
+                    self.sent_at = sent_at
+            
+            email_logs.append(DummyLog(row[0], row[1], dt))
         
         # Profile image
         # Priority: 1. user.profile_pic, 2. Latest FaceEncoding
@@ -1085,7 +1242,8 @@ def register_routes(app):
                 "absent": total_absent,
                 "total": total_days,
                 "full_day": total_full_day,
-                "half_day": total_half_day
+                "half_day": total_half_day,
+                "short_day": total_short_day
             },
             "emotion_trend": emotion_counts,
             "notifications": [
@@ -1097,6 +1255,59 @@ def register_routes(app):
                 for l in email_logs
             ]
         })
+
+    # ---------------- ADMIN APPROVE ATTENDANCE API -----------------
+    @app.route('/api/admin/approve_attendance', methods=['POST'])
+    @login_required
+    def approve_attendance():
+        if not current_user.is_admin:
+            return jsonify({"success": False, "message": "Unauthorized"}), 403
+
+        data = request.json or {}
+        employee_id = data.get('employee_id')
+        date_str = data.get('date')
+        decision = data.get('decision') # 'full_day' or 'half_day'
+
+        if not employee_id or not date_str or not decision:
+            return jsonify({"success": False, "message": "Missing parameters"}), 400
+
+        if decision not in ('full_day', 'half_day', 'absent'):
+            return jsonify({"success": False, "message": "Invalid decision. Must be full_day, half_day, or absent."}), 400
+
+        try:
+            query_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({"success": False, "message": "Invalid date format"}), 400
+
+        attendance = Attendance.query.filter_by(user_id=employee_id, date=query_date).first()
+        if not attendance:
+            return jsonify({"success": False, "message": "Attendance record not found"}), 404
+
+        if attendance.work_type != 'admin_approval' or attendance.approval_status != 'pending':
+            return jsonify({"success": False, "message": "This record does not require approval"}), 400
+
+        if decision == 'absent':
+            attendance.status = 'absent'
+            attendance.work_type = 'absent'
+            attendance.working_hours = 0.0
+            attendance.overtime_hours = 0.0
+            attendance.approval_status = 'approved'
+            msg = "Attendance marked as Absent."
+        else:
+            attendance.work_type = decision
+            attendance.approval_status = 'approved'
+            if decision == 'full_day':
+                attendance.working_hours = 8.0
+                if not attendance.overtime_hours:
+                    attendance.overtime_hours = 0.0
+            elif decision == 'half_day':
+                attendance.working_hours = 4.0
+                if not attendance.overtime_hours:
+                    attendance.overtime_hours = 0.0
+            msg = f"Attendance successfully approved as {decision.replace('_', ' ')}."
+
+        db.session.commit()
+        return jsonify({"success": True, "message": msg})
 
 
 # ---------------- ADMIN ATTENDANCE REPORT -----------------
@@ -1118,13 +1329,13 @@ def register_routes(app):
         attendances = Attendance.query.filter(db.func.date(Attendance.date) == date_obj).all()
         employees = User.query.filter_by(is_admin=False, is_active=True).all()
 
-        # 🌞 HOLIDAY CHECK (Sunday) - Only if NO records exist
+        #  HOLIDAY CHECK (Sunday) - Only if NO records exist
         if date_obj.weekday() == 6 and not attendances:  # Sunday=6
             return jsonify({
                 "success": True,
                 "special": True,
                 "type": "holiday",
-                "message": f"🌞 It's Sunday — a weekend holiday! No attendance recorded.",
+                "message": f" It's Sunday — a weekend holiday! No attendance recorded.",
                 "report": {"present": [], "absent": []}
         })
 
@@ -1169,10 +1380,11 @@ def register_routes(app):
         today_attendance = Attendance.query.filter_by(user_id=current_user.id, date=today).first()
 
         all_attendances = Attendance.query.filter_by(user_id=current_user.id).all()
-        total_present = sum(1 for att in all_attendances if att.mark_in_time)
+        total_present = sum(1 for att in all_attendances if att and att.mark_in_time)
 
-        if all_attendances:
-            first_day = min(att.date for att in all_attendances)
+        valid_attendances = [att for att in all_attendances if att]
+        if valid_attendances:
+            first_day = min(att.date for att in valid_attendances)
         else:
             first_day = today
         
@@ -1189,11 +1401,33 @@ def register_routes(app):
                                if (first_day + timedelta(days=i)).weekday() < 6)
         total_absent_count = max(0, total_days_count - total_present)
 
-        # Notifications and Email Logs
-        notifications = Notification.query.filter_by(user_id=current_user.id) \
-            .order_by(Notification.created_at.desc()).limit(10).all()
-        email_logs = EmailLog.query.filter_by(user_id=current_user.id) \
-            .order_by(EmailLog.sent_at.desc()).all()
+        notifications = []
+        
+        # Query from email_report view
+        email_rows = db.session.execute(
+            db.text("SELECT subject, status, sent_time FROM email_report WHERE email_address = :email ORDER BY sent_time DESC"),
+            {'email': current_user.email}
+        ).fetchall()
+        
+        email_logs = []
+        for row in email_rows:
+            sent_time_val = row[2]
+            if isinstance(sent_time_val, str):
+                try:
+                    date_str = sent_time_val.split('.')[0]
+                    dt = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    dt = datetime.utcnow()
+            else:
+                dt = sent_time_val or datetime.utcnow()
+            
+            class DummyLog:
+                def __init__(self, subject, status, sent_at):
+                    self.subject = subject
+                    self.status = status
+                    self.sent_at = sent_at
+            
+            email_logs.append(DummyLog(row[0], row[1], dt))
 
         # Emotion data (Strictly Weekly - Last 7 Days)
         try:
@@ -1202,47 +1436,47 @@ def register_routes(app):
         except Exception:
             emotion_counts = {}
             seven_days_ago = today - timedelta(days=7)
-            recent_attendances = [a for a in all_attendances if a.date >= seven_days_ago]
+            recent_attendances = [a for a in all_attendances if a and a.date >= seven_days_ago]
             for att in recent_attendances:
-                if att.emotion:
-                    emotions = [e.strip().lower() for e in att.emotion.split(',')]
-                    for emotion in emotions:
-                        emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
+                if att:
+                    for emo in (att.mark_in_emotion, att.break_out_emotion, att.break_in_emotion, att.mark_out_emotion):
+                        if emo and emo != 'not recorded':
+                            emotion_counts[emo.lower()] = emotion_counts.get(emo.lower(), 0) + 1
 
         emotion_has_data = bool(emotion_counts)
         
-        # Calculate Full/Half day based on timing logic (Historical & Real-time)
+        # Calculate Full/Half/Short day based on timing logic (Historical & Real-time)
         total_full_day = 0
         total_half_day = 0
+        total_short_day = 0
         for att in all_attendances:
-            # Calculate working hours to determine classification
-            effective_out = att.mark_out_time
-            if not effective_out:
-                if att.break_in_time: effective_out = att.break_in_time
-                elif att.break_out_time: effective_out = att.break_out_time
+            if not att or not att.mark_in_time or att.status == 'absent':
+                continue
             
-            working_hours = 0
-            if att.mark_in_time and effective_out:
-                if att.break_out_time and att.break_in_time:
-                    seg1 = max(0, (att.break_out_time - att.mark_in_time).total_seconds() / 60)
-                    seg2 = max(0, (effective_out - att.break_in_time).total_seconds() / 60)
-                    working_hours = (seg1 + seg2) / 60
-                elif att.break_out_time and not att.break_in_time:
-                    seg1 = max(0, (att.break_out_time - att.mark_in_time).total_seconds() / 60)
-                    working_hours = seg1 / 60
+            # Short Day logic:
+            is_short = (
+                att.mark_in_time is not None and
+                att.mark_out_time is not None and
+                att.break_out_time is not None and
+                att.break_in_time is not None and
+                (att.working_hours or 0.0) < 4.0
+            )
+            
+            if is_short:
+                total_short_day += 1
+            elif att.approval_status == 'approved':
+                if att.work_type == 'full_day':
+                    total_full_day += 1
+                elif att.work_type == 'half_day':
+                    total_half_day += 1
+            elif att.work_type == 'admin_approval' and att.approval_status == 'pending':
+                pass
+            else:
+                wh = att.working_hours or 0.0
+                if wh >= 8.0:
+                    total_full_day += 1
                 else:
-                    total_mins = (effective_out - att.mark_in_time).total_seconds() / 60
-                    working_hours = max(0, total_mins) / 60
-
-            is_full = False
-            if att.mark_out_time and working_hours >= 8:
-                # Full day: must mark in by 9:00 AM and mark out by 6:00 PM
-                if att.mark_in_time.hour < 9 or (att.mark_in_time.hour == 9 and att.mark_in_time.minute == 0):
-                    if att.mark_out_time.hour >= 18:
-                        is_full = True
-            
-            if is_full: total_full_day += 1
-            elif att.mark_in_time: total_half_day += 1
+                    total_half_day += 1
 
         # Profile image
         image_url = None
@@ -1261,6 +1495,7 @@ def register_routes(app):
             absent_count=total_absent_count,
             full_day_count=total_full_day,
             half_day_count=total_half_day,
+            short_day_count=total_short_day,
             notifications=notifications,
             email_logs=email_logs,
             emotion_trend=emotion_counts,
@@ -1319,67 +1554,42 @@ def register_routes(app):
         present_count = len(attendances)
         absent_count = max(0, total_working_days - present_count)
         
-        # Full/Half Day breakdown
+        # Full/Half/Short Day breakdown
         full_day = 0
         half_day = 0
+        short_day = 0
         total_working_hours = 0
         total_overtime_hours = 0
 
         for att in attendances:
-            # 1. Determine Effective Out
-            effective_out = att.mark_out_time
-            if not effective_out:
-                if att.break_in_time:
-                    effective_out = att.break_in_time
-                elif att.break_out_time:
-                    effective_out = att.break_out_time
-
-            # 2. Calculate Break Deduction (for flags only, actual working time is segmented)
-            deduction_mins = 0
-            if att.break_out_time and att.break_in_time:
-                actual_break = (att.break_in_time - att.break_out_time).total_seconds() / 60
-                deduction_mins = max(60, actual_break)
-            elif att.break_out_time and att.mark_out_time:
-                deduction_mins = 60
-            
-            # 3. Calculate Working Time
-            working_hours = 0
-            if att.mark_in_time and effective_out:
-                if att.break_out_time and att.break_in_time:
-                    seg1 = max(0, (att.break_out_time - att.mark_in_time).total_seconds() / 60)
-                    seg2 = max(0, (effective_out - att.break_in_time).total_seconds() / 60)
-                    working_hours = (seg1 + seg2) / 60
-                elif att.break_out_time and not att.break_in_time:
-                    seg1 = max(0, (att.break_out_time - att.mark_in_time).total_seconds() / 60)
-                    working_hours = seg1 / 60
-                else:
-                    total_mins = (effective_out - att.mark_in_time).total_seconds() / 60
-                    working_hours = max(0, total_mins) / 60
-                
-            overtime = 0
-            if att.date.weekday() == 6: # Sunday
-                overtime = working_hours
-                working_hours = 0
-            else:
-                if working_hours > 8:
-                    overtime = working_hours - 8
-                    working_hours = 8
-                else:
-                    overtime = 0
-
+            working_hours = att.working_hours or 0.0
+            overtime = att.overtime_hours or 0.0
             total_working_hours += working_hours
             total_overtime_hours += overtime
 
-            # 4. Status (Full Day: mark-in ≤ 9:00, mark-out ≥ 18:00, working hours ≥ 8h)
-            is_full = False
-            if att.mark_out_time and working_hours >= 8:
-                on_time_in = att.mark_in_time.hour < 9 or (att.mark_in_time.hour == 9 and att.mark_in_time.minute == 0)
-                on_time_out = att.mark_out_time.hour >= 18
-                if on_time_in and on_time_out:
-                    is_full = True
-            
-            if is_full: full_day += 1
-            else: half_day += 1
+            # Short Day logic:
+            is_short = (
+                att.mark_in_time is not None and
+                att.mark_out_time is not None and
+                att.break_out_time is not None and
+                att.break_in_time is not None and
+                working_hours < 4.0
+            )
+
+            if is_short:
+                short_day += 1
+            elif att.approval_status == 'approved':
+                if att.work_type == 'full_day':
+                    full_day += 1
+                elif att.work_type == 'half_day':
+                    half_day += 1
+            elif att.work_type == 'admin_approval' and att.approval_status == 'pending':
+                pass
+            else:
+                if working_hours >= 8.0:
+                    full_day += 1
+                else:
+                    half_day += 1
 
         attendance_percentage = (present_count / total_working_days * 100) if total_working_days > 0 else 0
 
@@ -1391,6 +1601,7 @@ def register_routes(app):
                 "absent_count": absent_count,
                 "full_day": full_day,
                 "half_day": half_day,
+                "short_day": short_day,
                 "percentage": round(attendance_percentage, 1),
                 "working_time": format_duration(total_working_hours),
                 "overtime": format_duration(total_overtime_hours)
@@ -1434,7 +1645,7 @@ def register_routes(app):
 
         attendance = Attendance.query.filter_by(user_id=user_id, date=query_date).first()
 
-        # 🌞 HOLIDAY CHECK (Sunday) - Only if NO record exists
+        #  HOLIDAY CHECK (Sunday) - Only if NO record exists
         if query_date.weekday() == 6 and (not attendance or not attendance.mark_in_time):
             return jsonify({
                 'success': True,
@@ -1480,52 +1691,117 @@ def register_routes(app):
         # Case C & D: Left during break or No Break -> Deduction = 0
 
         # 3. Calculate Working Time
-        working_hours = 0
-        if attendance.mark_in_time and effective_out:
-            if attendance.break_out_time and attendance.break_in_time:
-                seg1 = max(0, (attendance.break_out_time - attendance.mark_in_time).total_seconds() / 60)
-                seg2 = max(0, (effective_out - attendance.break_in_time).total_seconds() / 60)
-                working_hours = (seg1 + seg2) / 60
-            elif attendance.break_out_time and not attendance.break_in_time:
-                seg1 = max(0, (attendance.break_out_time - attendance.mark_in_time).total_seconds() / 60)
-                working_hours = seg1 / 60
-            else:
-                total_mins = (effective_out - attendance.mark_in_time).total_seconds() / 60
-                working_hours = max(0, total_mins) / 60
-            
-        overtime = 0
-        if query_date.weekday() == 6: # Sunday: All hours are overtime
-            overtime = working_hours
-            working_hours = 0
+        if attendance.status == 'incomplete_session' or attendance.mark_out_time:
+            working_hours = attendance.working_hours or 0.0
+            overtime = attendance.overtime_hours or 0.0
         else:
-            if working_hours > 8:
-                overtime = working_hours - 8
-                working_hours = 8
+            # Active session: calculate on the fly
+            working_hours = 0
+            if attendance.mark_in_time and effective_out:
+                if attendance.break_out_time and attendance.break_in_time:
+                    seg1 = max(0, (attendance.break_out_time - attendance.mark_in_time).total_seconds() / 60)
+                    seg2 = max(0, (effective_out - attendance.break_in_time).total_seconds() / 60)
+                    working_hours = (seg1 + seg2) / 60
+                elif attendance.break_out_time and not attendance.break_in_time:
+                    seg1 = max(0, (attendance.break_out_time - attendance.mark_in_time).total_seconds() / 60)
+                    working_hours = seg1 / 60
+                else:
+                    total_mins = (effective_out - attendance.mark_in_time).total_seconds() / 60
+                    working_hours = max(0, total_mins) / 60
+            
+            overtime = 0
+            if query_date.weekday() == 6: # Sunday
+                overtime = working_hours
+                working_hours = 0
             else:
-                overtime = 0
+                if working_hours > 8:
+                    overtime = working_hours - 8
+                    working_hours = 8
+                else:
+                    overtime = 0
 
         # 4. Status and Flags
         incomplete_session = (attendance.mark_out_time is None)
         
-        # Late = after 9:00 AM exactly
-        is_late = attendance.mark_in_time.hour > 9 or (attendance.mark_in_time.hour == 9 and attendance.mark_in_time.minute > 0)
-        is_early_exit = False
-        if attendance.mark_out_time:
-            # Early exit = left before 6:00 PM (18:00)
-            is_early_exit = attendance.mark_out_time.hour < 18
+        # Calculate time-based flags
+        is_early_entry = False
+        is_on_time_entry = False
+        is_late_entry = False
+        if attendance.mark_in_time:
+            _tot = attendance.mark_in_time.hour * 3600 + attendance.mark_in_time.minute * 60 + attendance.mark_in_time.second
+            if _tot < 9 * 3600:
+                is_early_entry = True
+            elif _tot <= 9 * 3600 + 15 * 60:
+                is_on_time_entry = True
+            else:
+                is_late_entry = True
 
-        break_incomplete = bool(attendance.break_out_time and not attendance.break_in_time)
-        
         early_break = False
+        on_time_break = False
         late_break = False
         if attendance.break_out_time:
-            if attendance.break_out_time.hour < 12:
+            _tot = attendance.break_out_time.hour * 3600 + attendance.break_out_time.minute * 60 + attendance.break_out_time.second
+            if _tot < 12 * 3600:
                 early_break = True
-            elif attendance.break_out_time.hour >= 13:
+            elif _tot <= 12 * 3600 + 15 * 60:
+                on_time_break = True
+            else:
                 late_break = True
+
+        early_break_return = False
+        on_time_break_return = False
+        late_break_return = False
+        long_break = False
+        if attendance.break_in_time:
+            _tot = attendance.break_in_time.hour * 3600 + attendance.break_in_time.minute * 60 + attendance.break_in_time.second
+            
+            # Check break duration
+            break_duration_hours = 0.0
+            if attendance.break_out_time:
+                break_duration_hours = (attendance.break_in_time - attendance.break_out_time).total_seconds() / 3600.0
+            
+            if break_duration_hours > 1.0:
+                long_break = True
+            else:
+                if _tot < 13 * 3600:
+                    early_break_return = True
+                elif _tot <= 13 * 3600 + 15 * 60:
+                    on_time_break_return = True
+                else:
+                    late_break_return = True
+
+        is_early_exit = False
+        is_on_time_exit = False
+        is_late_exit = False
+        if attendance.mark_out_time:
+            _tot = attendance.mark_out_time.hour * 3600 + attendance.mark_out_time.minute * 60 + attendance.mark_out_time.second
+            if _tot < 18 * 3600:
+                is_early_exit = True
+            elif _tot <= 18 * 3600 + 15 * 60:
+                is_on_time_exit = True
+            else:
+                is_late_exit = True
+
+        break_incomplete = bool(attendance.break_out_time and not attendance.break_in_time)
 
         # Format break duration label
         break_label = format_duration(actual_break_mins / 60)
+
+        # Determine day type flag (only for completed sessions)
+        day_type = None
+        if attendance.mark_out_time:
+            all_times_present = (
+                attendance.mark_in_time is not None and
+                attendance.mark_out_time is not None and
+                attendance.break_out_time is not None and
+                attendance.break_in_time is not None
+            )
+            if all_times_present and working_hours < 4.0:
+                day_type = 'Short Day'
+            elif working_hours >= 8.0:
+                day_type = 'Full Day'
+            else:
+                day_type = 'Half Day'
 
         data = {
             'success': True,
@@ -1539,19 +1815,31 @@ def register_routes(app):
                 'overtime': format_duration(overtime)
             },
             'flags': {
-                'on_time': not is_late,
-                'late_entry': is_late,
+                'on_time': not is_late_entry,
+                'late_entry': is_late_entry,
+                'early_entry': is_early_entry,
+                'on_time_entry': is_on_time_entry,
+                'early_break': early_break,
+                'on_time_break': on_time_break,
+                'late_break': late_break,
+                'early_break_return': early_break_return,
+                'on_time_break_return': on_time_break_return,
+                'late_break_return': late_break_return,
+                'long_break': long_break,
                 'early_exit': is_early_exit,
+                'on_time_exit': is_on_time_exit,
+                'late_exit': is_late_exit,
                 'has_overtime': overtime > 0,
                 'break_incomplete': break_incomplete,
-                'early_break': early_break,
-                'late_break': late_break,
-                'incomplete_session': incomplete_session,
+                'incomplete_session': incomplete_session or (attendance.status == 'incomplete_session'),
                 'short_break': short_break,
-                'forgot_break_in': forgot_break_in
+                'forgot_break_in': forgot_break_in,
+                'admin_approval': (attendance.work_type == 'admin_approval' and attendance.approval_status == 'pending'),
+                'admin_approved': (attendance.approval_status == 'approved'),
+                'day_type': day_type
             }
         }
-        
+
         return jsonify(data)
 
     # ---------------- MARK ATTENDANCE -----------------
@@ -1645,32 +1933,35 @@ def register_routes(app):
                     return jsonify({'success': False, 'message': f'Hi {user.name}, you have already Marked In today at {attendance.mark_in_time.strftime("%I:%M %p")}. Mark In is not allowed again.'})
                 
                 if not attendance:
-                    attendance = Attendance(user_id=user_id, date=today, status='present')
+                    attendance = Attendance(user_id=user_id, username=user.username, date=today, status='present')
                     db.session.add(attendance)
                 
                 attendance.mark_in_time = datetime.now()
                 attendance.mark_in_emotion = detected_emotion
-                attendance.emotion = detected_emotion  # legacy field
                 attendance.is_spoof = spoof_result.get('is_spoof', False)
                 attendance.latitude = lat_val
                 attendance.longitude = lon_val
                 
-                # Status: late if after 09:00:00
-                if attendance.mark_in_time.hour > 9 or (attendance.mark_in_time.hour == 9 and attendance.mark_in_time.minute > 0):
-                    attendance.status = 'late'
-                else:
-                    attendance.status = 'present'
-
-                # Mark In arrival status
+                # Status and Mark In arrival status based on new rules
                 _mi_h = attendance.mark_in_time.hour
                 _mi_m = attendance.mark_in_time.minute
-                _mi_total = _mi_h * 60 + _mi_m
-                if _mi_total < 9 * 60:
-                    arrival_status = "Early Arrival"
-                elif _mi_total <= 9 * 60 + 15:
-                    arrival_status = "On-Time Arrival"
+                _mi_s = attendance.mark_in_time.second
+                _mi_total_sec = _mi_h * 3600 + _mi_m * 60 + _mi_s
+
+                # Early Entry: < 09:00 AM (32400 sec)
+                # on time entry: 09:00 AM to 09:15 AM (inclusive, 32400 to 33300 sec)
+                # Late Entry: > 09:15 AM (33300 sec)
+                if _mi_total_sec < 9 * 3600:
+                    arrival_status = "Early Entry"
+                    attendance.status = 'present'
+                elif _mi_total_sec <= 9 * 3600 + 15 * 60:
+                    arrival_status = "on time entry"
+                    attendance.status = 'present'
                 else:
-                    arrival_status = "Late Arrival"
+                    arrival_status = "Late Entry"
+                    attendance.status = 'late'
+
+                attendance.mark_in_status = arrival_status
 
                 msg = f"Marked In Successful for {user.name}"
                 current_time = attendance.mark_in_time.strftime('%I:%M %p')
@@ -1711,13 +2002,20 @@ def register_routes(app):
                 # Break Out status
                 _bo_h = attendance.break_out_time.hour
                 _bo_m = attendance.break_out_time.minute
-                _bo_total = _bo_h * 60 + _bo_m
-                if _bo_total < 12 * 60:
+                _bo_s = attendance.break_out_time.second
+                _bo_total_sec = _bo_h * 3600 + _bo_m * 60 + _bo_s
+
+                # Early Break: < 12:00 PM (43200 sec)
+                # On time Break: 12:00 PM to 12:15 PM (inclusive, 43200 to 44100 sec)
+                # Late Break: > 12:15 PM (44100 sec)
+                if _bo_total_sec < 12 * 3600:
                     break_out_status = "Early Break"
-                elif _bo_total <= 12 * 60 + 15:
-                    break_out_status = "On-Time Break"
+                elif _bo_total_sec <= 12 * 3600 + 15 * 60:
+                    break_out_status = "On time Break"
                 else:
                     break_out_status = "Late Break"
+
+                attendance.break_out_status = break_out_status
 
                 msg = f'Break Out Recorded for {user.name}'
                 display_msg = f"{msg} [{break_out_status}]"
@@ -1756,13 +2054,28 @@ def register_routes(app):
                 # Break In return status
                 _bi_h = attendance.break_in_time.hour
                 _bi_m = attendance.break_in_time.minute
-                _bi_total = _bi_h * 60 + _bi_m
-                if _bi_total < 13 * 60:
-                    break_in_status = "Early Break Return"
-                elif _bi_total <= 13 * 60 + 15:
-                    break_in_status = "On-Time Break Return"
+                _bi_s = attendance.break_in_time.second
+                _bi_total_sec = _bi_h * 3600 + _bi_m * 60 + _bi_s
+
+                # Check break duration
+                break_duration_hours = 0.0
+                if attendance.break_out_time:
+                    break_duration_hours = (attendance.break_in_time - attendance.break_out_time).total_seconds() / 3600.0
+
+                if break_duration_hours > 1.0:
+                    break_in_status = "Long Break"
                 else:
-                    break_in_status = "Late Break Return"
+                    # early Break return: < 01:00 PM (46800 sec)
+                    # On time Break retuen: 01:00 PM to 01:15 PM (inclusive, 46800 to 47700 sec)
+                    # late Break return: > 01:15 PM (47700 sec)
+                    if _bi_total_sec < 13 * 3600:
+                        break_in_status = "early Break return"
+                    elif _bi_total_sec <= 13 * 3600 + 15 * 60:
+                        break_in_status = "On time Break retuen"
+                    else:
+                        break_in_status = "late Break return"
+
+                attendance.break_in_status = break_in_status
 
                 msg = f'Break In Recorded for {user.name}'
                 display_msg = f"{msg} [{break_in_status}]"
@@ -1793,12 +2106,26 @@ def register_routes(app):
 
                 attendance.mark_out_time = datetime.now()
                 attendance.mark_out_emotion = detected_emotion
-                attendance.emotion = detected_emotion  # legacy field
                 
                 # Auto-Close Break if needed
                 if attendance.break_out_time and not attendance.break_in_time:
                     attendance.break_in_time = attendance.mark_out_time
                     attendance.break_in_auto_generated = True
+                    # Calculate status for the auto-closed break return
+                    _bi_h = attendance.break_in_time.hour
+                    _bi_m = attendance.break_in_time.minute
+                    _bi_s = attendance.break_in_time.second
+                    _bi_total_sec = _bi_h * 3600 + _bi_m * 60 + _bi_s
+                    break_duration_hours = (attendance.break_in_time - attendance.break_out_time).total_seconds() / 3600.0
+                    if break_duration_hours > 1.0:
+                        attendance.break_in_status = "Long Break"
+                    else:
+                        if _bi_total_sec < 13 * 3600:
+                            attendance.break_in_status = "early Break return"
+                        elif _bi_total_sec <= 13 * 3600 + 15 * 60:
+                            attendance.break_in_status = "On time Break retuen"
+                        else:
+                            attendance.break_in_status = "late Break return"
 
                 # Calculate Net Working Hours
                 total_mins = (attendance.mark_out_time - attendance.mark_in_time).total_seconds() / 60.0
@@ -1812,36 +2139,49 @@ def register_routes(app):
                 
                 net_working_mins = max(0, total_mins - deduction_mins)
                 net_working_hours = net_working_mins / 60.0
-                attendance.net_working_hours = net_working_hours
-
-                # Work Type Classification
-                if net_working_hours >= 8.0:
-                    attendance.work_type = 'full_day'
-                else:
-                    attendance.work_type = 'half_day'
 
                 # Overtime
-                if today.weekday() == 6:  # Sunday
+                if today.weekday() == 6:  # Sunday: all hours = overtime
+                    attendance.working_hours = 0.0
                     attendance.overtime_hours = net_working_hours
                 else:
                     if net_working_hours > 8.0:
+                        attendance.working_hours = 8.0
                         attendance.overtime_hours = net_working_hours - 8.0
                     else:
+                        attendance.working_hours = net_working_hours
                         attendance.overtime_hours = 0.0
 
+                # Work Type Classification for completed sessions
+                if net_working_hours >= 8.0:
+                    attendance.work_type = 'full_day'
+                elif net_working_hours >= 4.0:
+                    attendance.work_type = 'half_day'
+                else:
+                    # Less than 4 hours worked => short day (status stays 'present')
+                    attendance.work_type = 'short_day'
+                    attendance.status = 'present'
+
                 current_time = attendance.mark_out_time.strftime('%I:%M %p')
-                status_label = attendance.work_type.replace("_", " ").title()
+                status_label = (attendance.work_type or '').replace("_", " ").title()
 
                 # Mark Out departure status
                 _mo_h = attendance.mark_out_time.hour
                 _mo_m = attendance.mark_out_time.minute
-                _mo_total = _mo_h * 60 + _mo_m
-                if _mo_total < 18 * 60:
+                _mo_s = attendance.mark_out_time.second
+                _mo_total_sec = _mo_h * 3600 + _mo_m * 60 + _mo_s
+
+                # Early Departure: < 06:00 PM (64800 sec)
+                # on time Departure: 06:00 PM to 06:15 PM (inclusive, 64800 to 65700 sec)
+                # Late Departure: > 06:15 PM (65700 sec)
+                if _mo_total_sec < 18 * 3600:
                     departure_status = "Early Departure"
-                elif _mo_total <= 18 * 60 + 15:
-                    departure_status = "On-Time Departure"
+                elif _mo_total_sec <= 18 * 3600 + 15 * 60:
+                    departure_status = "on time Departure"
                 else:
-                    departure_status = "Overtime Recorded"
+                    departure_status = "Late Departure"
+
+                attendance.mark_out_status = departure_status
 
                 msg = f'Marked Out Successful for {user.name} ({status_label})'
                 display_msg = f"{msg} [{departure_status}]"
@@ -2027,8 +2367,6 @@ def register_routes(app):
             from models import FaceEncoding
             # Collect all attendance IDs for this user (needed for future audit if required)
             Attendance.query.filter_by(user_id=user_id).delete()
-            Notification.query.filter_by(user_id=user_id).delete()
-            EmailLog.query.filter_by(user_id=user_id).delete()
 
             FaceEncoding.query.filter_by(user_id=user_id).delete()
 

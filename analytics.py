@@ -203,6 +203,9 @@ class EmployeeInsights:
         # All 4 per-event emotion columns
         event_fields = ['mark_in_emotion', 'break_out_emotion', 'break_in_emotion', 'mark_out_emotion']
 
+        # Values to exclude from emotion trend display
+        EXCLUDED_EMOTIONS = {'not recorded', 'none', 'null', 'n/a', 'unknown', ''}
+
         for att in attendances:
             for field in event_fields:
                 raw_emotion = getattr(att, field, None)
@@ -211,7 +214,7 @@ class EmployeeInsights:
                 # Handle comma-separated emotions defensively
                 emotions = [e.strip().lower() for e in raw_emotion.split(',')]
                 for emotion in emotions:
-                    if not emotion:
+                    if not emotion or emotion in EXCLUDED_EMOTIONS:
                         continue
                     emotion_counts[emotion] += 1
                     if att.user and att.user.department:

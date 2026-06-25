@@ -31,7 +31,7 @@ class FaceRecognitionSystem:
 
             # Skip unclear images
             if len(face_locations) != 1:
-                print(f"⚠️ Skipping {image_path}: found {len(face_locations)} faces.")
+                print(f" Skipping {image_path}: found {len(face_locations)} faces.")
                 return []
 
             encoding = face_recognition.face_encodings(image, known_face_locations=face_locations)[0]
@@ -80,7 +80,7 @@ class FaceRecognitionSystem:
             if encodings:
                 self.save_face_encoding(user_id, encodings[0], image_path)
                 successful_encodings += 1
-        print(f"✅ Trained {successful_encodings} valid encodings for user {user_id}")
+        print(f" Trained {successful_encodings} valid encodings for user {user_id}")
         return successful_encodings
 
     def detect_faces(self, frame):

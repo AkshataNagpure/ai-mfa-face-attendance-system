@@ -48,8 +48,10 @@ if (emotionTrendsDataElement) {
 }
 
 const emotionTrendCtx = document.getElementById('emotionTrendChart');
+const EXCLUDED_EMOTIONS = new Set(['not recorded', 'none', 'null', 'n/a', 'unknown']);
 if (emotionTrendCtx && emotionTrendsData && emotionTrendsData.overall_emotions) {
-    const countsEntries = Object.entries(emotionTrendsData.overall_emotions).filter(([, count]) => count > 0);
+    const countsEntries = Object.entries(emotionTrendsData.overall_emotions)
+        .filter(([emotion, count]) => count > 0 && !EXCLUDED_EMOTIONS.has(emotion.toLowerCase().trim()));
 
     if (countsEntries.length > 0) {
         const emotions = countsEntries.map(([emotion]) => emotion);
@@ -120,7 +122,7 @@ async function deleteEmployee(userId) {
 }
 
 // ======================
-// 🤖 AI Chat Assistant
+//  AI Chat Assistant
 // ======================
 let welcomeMessageAdded = false;
 
@@ -134,7 +136,7 @@ function toggleTrackHub() {
         trigger.innerHTML = '💬';
     } else {
         chatWin.style.display = 'flex';
-        trigger.innerHTML = '✕';
+        trigger.innerHTML = '❌';
 
         // Auto-add welcome greeting if first time opening
         if (!welcomeMessageAdded) {
@@ -186,7 +188,7 @@ function addChatMessage(message, sender) {
 }
 
 // ======================
-// ⚙️ Event Listeners
+//  Event Listeners
 // ======================
 document.addEventListener('DOMContentLoaded', function () {
     // Enter key for chat
@@ -232,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // ======================
-// 👤 Employee Details Logic
+//  Employee Details Logic
 // ======================
 let attendanceChartInstance = null;
 let emotionChartInstance = null;
@@ -339,7 +341,7 @@ function closeEmployeeDetailsModal() {
 }
 
 // ======================
-// 👤 Edit Employee Profile Info
+//  Edit Employee Profile Info
 // ======================
 function toggleEditProfile(show) {
     const viewMode = document.getElementById('profileViewMode');
@@ -427,7 +429,9 @@ function renderDetailEmotionChart(emotionCounts) {
     const ctx = canvas.getContext('2d');
     if (emotionChartInstance) emotionChartInstance.destroy();
 
-    const countsEntries = Object.entries(emotionCounts).filter(([, count]) => count > 0);
+    const EXCLUDED_EMOTIONS_DETAIL = new Set(['not recorded', 'none', 'null', 'n/a', 'unknown']);
+    const countsEntries = Object.entries(emotionCounts)
+        .filter(([emotion, count]) => count > 0 && !EXCLUDED_EMOTIONS_DETAIL.has(emotion.toLowerCase().trim()));
 
     if (countsEntries.length === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -470,6 +474,7 @@ async function updateMonthlySummary() {
     const totalEl = document.getElementById('detailTotal');
     const fullDayEl = document.getElementById('detailFullDay');
     const halfDayEl = document.getElementById('detailHalfDay');
+    const shortDayEl = document.getElementById('detailShortDay');
     const percentEl = document.getElementById('detailPercentage');
     const workingHoursEl = document.getElementById('detailWorkingHours');
     const overtimeHoursEl = document.getElementById('detailOvertimeHours');
@@ -485,6 +490,7 @@ async function updateMonthlySummary() {
             totalEl.textContent = stats.total_working_days;
             fullDayEl.textContent = stats.full_day;
             halfDayEl.textContent = stats.half_day;
+            if (shortDayEl) shortDayEl.textContent = stats.short_day;
             percentEl.textContent = `${stats.percentage}%`;
 
             if (workingHoursEl) workingHoursEl.textContent = stats.working_time;
@@ -502,7 +508,7 @@ async function updateMonthlySummary() {
 }
 
 // ======================
-// 🪟 Modal Close Handler
+//  Modal Close Handler
 // ======================
 window.onclick = function (e) {
     const faceModal = document.getElementById('faceImagesModal');
@@ -516,10 +522,10 @@ window.onclick = function (e) {
 };
 
 // ======================
-// 📅 Attendance Report Fetch
+//  Attendance Report Fetch
 // ======================
 // ======================
-// 📅 Attendance Report Fetch (Fixed)
+//  Attendance Report Fetch (Fixed)
 // ======================
 async function fetchAttendanceReport() {
     const dateInput = document.getElementById('reportDate');
@@ -547,7 +553,7 @@ async function fetchAttendanceReport() {
             return;
         }
 
-        // ✅ handle future and weekend cases
+        //  handle future and weekend cases
         if (data.special) {
             let alertClass = "alert-info";
             if (data.type === "holiday") alertClass = "alert-warning";
@@ -561,14 +567,14 @@ async function fetchAttendanceReport() {
             return;
         }
 
-        // ✅ Normal attendance data
+        //  Normal attendance data
         const report = data.report || { present: [], absent: [] };
         const present = report.present || [];
         const absent = report.absent || [];
 
         let html = `
             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                <h4 class="mt-3">✅ Present Employees (${present.length})</h4>
+                <h4 class="mt-3"> Present Employees (${present.length})</h4>
                 <table class="table table-striped table-bordered align-middle">
                     <thead><tr><th>Name</th><th>Department</th><th>Mark-In</th><th>Mark-Out</th></tr></thead>
                     <tbody>
@@ -583,7 +589,7 @@ async function fetchAttendanceReport() {
                     </tbody>
                 </table>
 
-                <h4 class="mt-4">❌ Absent Employees (${absent.length})</h4>
+                <h4 class="mt-4"> Absent Employees (${absent.length})</h4>
                 <table class="table table-striped table-bordered align-middle">
                     <thead><tr><th>Name</th><th>Department</th></tr></thead>
                     <tbody>
@@ -606,7 +612,7 @@ async function fetchAttendanceReport() {
 }
 
 // ======================
-// 📊 Detailed Employee Attendance Report (Modal)
+//  Detailed Employee Attendance Report (Modal)
 // ======================
 async function fetchEmployeeDetailedReport() {
     const selectedDate = document.getElementById('detailReportDateSelect').value;
@@ -629,17 +635,17 @@ async function fetchEmployeeDetailedReport() {
 
             if (data.is_not_registered) {
                 emptyArea.innerHTML = `
-                    <div style="font-size: 1.4rem; font-weight: bold; color: #94a3b8; margin-bottom: 5px;">👤 Status: Not Registered</div>
+                    <div style="font-size: 1.4rem; font-weight: bold; color: #94a3b8; margin-bottom: 5px;"> Status: Not Registered</div>
                     <div style="font-size: 1rem; color: #7f8c8d;">${data.message || 'Employee was not registered on this date.'}</div>
                 `;
             } else if (data.is_holiday) {
                 emptyArea.innerHTML = `
-                    <div style="font-size: 1.4rem; font-weight: bold; color: #3498db; margin-bottom: 5px;">🌞 Status: Sunday Holiday</div>
+                    <div style="font-size: 1.4rem; font-weight: bold; color: #3498db; margin-bottom: 5px;"> Status: Sunday Holiday</div>
                     <div style="font-size: 1rem; color: #7f8c8d;">${data.message || 'It\'s Sunday — a weekend holiday! No attendance recorded.'}</div>
                 `;
             } else {
                 emptyArea.innerHTML = `
-                    <div style="font-size: 1.4rem; font-weight: bold; color: #e74c3c; margin-bottom: 5px;">🔴 Status: Absent</div>
+                    <div style="font-size: 1.4rem; font-weight: bold; color: #e74c3c; margin-bottom: 5px;"> Status: Absent</div>
                     <div style="font-size: 1rem; color: #7f8c8d;">No attendance recordings found for ${data.date || selectedDate}.</div>
                 `;
             }
@@ -660,32 +666,101 @@ async function fetchEmployeeDetailedReport() {
         const badgesDiv = document.getElementById('detailReportBadges');
         badgesDiv.innerHTML = '';
 
-        if (data.flags.on_time) {
-            badgesDiv.innerHTML += '<span style="background:#2ecc71; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">On Time</span>';
+        // --- Mark In Badges ---
+        if (data.flags.early_entry) {
+            badgesDiv.innerHTML += '<span style="background:#3498db; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Early Entry</span>';
+        } else if (data.flags.on_time_entry) {
+            badgesDiv.innerHTML += '<span style="background:#2ecc71; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> On Time Entry</span>';
+        } else if (data.flags.late_entry) {
+            badgesDiv.innerHTML += '<span style="background:#e67e22; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Late Entry</span>';
         }
-        if (data.flags.late_entry) {
-            badgesDiv.innerHTML += '<span style="background:#f39c12; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Late Entry</span>';
+
+        // --- Break Out Badges ---
+        if (data.flags.early_break) {
+            badgesDiv.innerHTML += '<span style="background:#9b59b6; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Early Break</span>';
+        } else if (data.flags.on_time_break) {
+            badgesDiv.innerHTML += '<span style="background:#27ae60; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> On Time Break</span>';
+        } else if (data.flags.late_break) {
+            badgesDiv.innerHTML += '<span style="background:#2c3e50; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Late Break</span>';
         }
+
+        // --- Break In Badges ---
+        if (data.flags.long_break) {
+            badgesDiv.innerHTML += '<span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Long Break</span>';
+        } else if (data.flags.early_break_return) {
+            badgesDiv.innerHTML += '<span style="background:#1abc9c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Early Break Return</span>';
+        } else if (data.flags.on_time_break_return) {
+            badgesDiv.innerHTML += '<span style="background:#27ae60; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> On Time Break Return</span>';
+        } else if (data.flags.late_break_return) {
+            badgesDiv.innerHTML += '<span style="background:#e67e22; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Late Break Return</span>';
+        }
+
+        // --- Mark Out Badges ---
         if (data.flags.early_exit) {
-            badgesDiv.innerHTML += '<span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Early Exit</span>';
+            badgesDiv.innerHTML += '<span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Early Departure</span>';
+        } else if (data.flags.on_time_exit) {
+            badgesDiv.innerHTML += '<span style="background:#2ecc71; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> On Time Departure</span>';
+        } else if (data.flags.late_exit) {
+            badgesDiv.innerHTML += '<span style="background:#8e44ad; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Late Departure</span>';
         }
+
+        // --- Other Badges (kept as-is) ---
         if (data.flags.has_overtime) {
-            badgesDiv.innerHTML += '<span style="background:#3498db; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Overtime</span>';
+            badgesDiv.innerHTML += '<span style="background:#3498db; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Overtime</span>';
         }
         if (data.flags.incomplete_session) {
-            badgesDiv.innerHTML += '<span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Incomplete Session</span>';
+            badgesDiv.innerHTML += '<span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Incomplete Session</span>';
         }
         if (data.flags.forgot_break_in) {
-            badgesDiv.innerHTML += '<span style="background:#e67e22; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Forgot Break In</span>';
+            badgesDiv.innerHTML += '<span style="background:#e67e22; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Forgot Break In</span>';
         }
         if (data.flags.short_break) {
-            badgesDiv.innerHTML += '<span style="background:#f1c40f; color:black; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Short Break</span>';
+            badgesDiv.innerHTML += '<span style="background:#f1c40f; color:black; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Short Break</span>';
         }
-        if (data.flags.early_break) {
-            badgesDiv.innerHTML += '<span style="background:#8e44ad; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Early Break</span>';
+        if (data.flags.admin_approval) {
+            badgesDiv.innerHTML += '<span onclick="toggleAdminApprovalSection()" style="background:#e67e22; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; cursor:pointer; font-weight:bold; margin-right:5px;">Pending Admin Approval </span>';
         }
-        if (data.flags.late_break) {
-            badgesDiv.innerHTML += '<span style="background:#2c3e50; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Late Break</span>';
+        if (data.flags.admin_approved) {
+            badgesDiv.innerHTML += '<span style="background:#2ecc71; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; margin-right:5px;">Admin Approved </span>';
+        }
+
+        // --- Day Type Badge ---
+        if (data.flags.day_type) {
+            let dtBg = '#16a085';
+            if (data.flags.day_type === 'Full Day') dtBg = '#27ae60';
+            else if (data.flags.day_type === 'Half Day') dtBg = '#e67e22';
+            else if (data.flags.day_type === 'Short Day') dtBg = '#c0392b';
+            badgesDiv.innerHTML += `<span style="background:${dtBg}; color:white; padding:4px 12px; border-radius:12px; font-size:0.82rem; font-weight:700; margin-right:5px; border: 2px solid rgba(255,255,255,0.3);">${data.flags.day_type}</span>`;
+        }
+
+        // Hide approval section by default
+        const approvalSection = document.getElementById('adminApprovalSection');
+        if (approvalSection) {
+            approvalSection.style.display = 'none';
+            const confirmCheck = document.getElementById('confirmApprovalCheck');
+            if (confirmCheck) {
+                confirmCheck.checked = false;
+                confirmCheck.onchange = function() {
+                    const enabled = this.checked;
+                    ['btnApproveFull', 'btnApproveHalf', 'btnMarkAbsent'].forEach(id => {
+                        const btn = document.getElementById(id);
+                        if (btn) {
+                            btn.disabled = !enabled;
+                            btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+                            btn.style.opacity = enabled ? '1' : '0.6';
+                        }
+                    });
+                };
+            }
+            // Reset all buttons to disabled initially
+            ['btnApproveFull', 'btnApproveHalf', 'btnMarkAbsent'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.disabled = true;
+                    btn.style.cursor = 'not-allowed';
+                    btn.style.opacity = '0.6';
+                }
+            });
         }
 
         emptyArea.style.display = 'none';
@@ -700,7 +775,7 @@ async function fetchEmployeeDetailedReport() {
 
 
 // ======================
-// 🤖 Predictive Attendance Table
+//  Predictive Attendance Table
 // ======================
 async function fetchPredictiveAttendance() {
     const section = document.getElementById('predictiveAttendanceSection');
@@ -723,7 +798,7 @@ async function fetchPredictiveAttendance() {
 
         section.innerHTML = `
             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                <h4 class="mt-3">🤖 Predictive Attendance</h4>
+                <h4 class="mt-3"> Predictive Attendance</h4>
                 <table class="table table-bordered table-striped align-middle">
                     <thead><tr><th>Name</th><th>Department</th><th>Predicted Attendance</th><th>Confidence</th></tr></thead>
                     <tbody>
@@ -743,3 +818,67 @@ async function fetchPredictiveAttendance() {
         section.innerHTML = `<p class="text-danger">Server error while fetching predictive attendance.</p>`;
     }
 }
+
+// ======================
+//  Admin Approval Handlers
+// ======================
+function toggleAdminApprovalSection() {
+    const section = document.getElementById('adminApprovalSection');
+    if (section) {
+        if (section.style.display === 'none') {
+            section.style.display = 'block';
+            section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            section.style.display = 'none';
+        }
+    }
+}
+window.toggleAdminApprovalSection = toggleAdminApprovalSection;
+
+async function submitAdminDecision(decision) {
+    const selectedDate = document.getElementById('detailReportDateSelect').value;
+    if (!currentDetailUserId || !selectedDate) {
+        alert('Please select a date first.');
+        return;
+    }
+    const confirmCheck = document.getElementById('confirmApprovalCheck');
+    if (!confirmCheck || !confirmCheck.checked) {
+        alert('Please check the confirmation box first.');
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to approve this record as a ${decision.replace('_', ' ')}?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/approve_attendance', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                employee_id: currentDetailUserId,
+                date: selectedDate,
+                decision: decision
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            alert(result.message);
+            // Hide approval section
+            const section = document.getElementById('adminApprovalSection');
+            if (section) section.style.display = 'none';
+            // Re-fetch detailed report
+            await fetchEmployeeDetailedReport();
+            // Re-fetch monthly stats
+            await updateMonthlySummary();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (err) {
+        console.error('Error submitting approval:', err);
+        alert('An error occurred. Please try again.');
+    }
+}
+window.submitAdminDecision = submitAdminDecision;

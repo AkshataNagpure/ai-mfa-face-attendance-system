@@ -91,7 +91,7 @@ function toggleTrackHub() {
         trigger.innerHTML = '💬';
     } else {
         chatWin.style.display = 'flex';
-        trigger.innerHTML = '✕';
+        trigger.innerHTML = '❌';
         
         // Auto-add welcome greeting if first time opening
         if (!welcomeMessageAdded) {
@@ -176,17 +176,17 @@ function fetchAttendanceReport() {
                 
                 if (data.is_not_registered) {
                     emptyArea.innerHTML = `
-                        <div style="font-size: 1.4rem; font-weight: bold; color: #94a3b8; margin-bottom: 5px;">👤 Status: Not Registered</div>
+                        <div style="font-size: 1.4rem; font-weight: bold; color: #94a3b8; margin-bottom: 5px;"> Status: Not Registered</div>
                         <div style="font-size: 1rem; color: #7f8c8d;">${data.message || 'You were not registered on this date.'}</div>
                     `;
                 } else if (data.is_holiday) {
                     emptyArea.innerHTML = `
-                        <div style="font-size: 1.4rem; font-weight: bold; color: #3498db; margin-bottom: 5px;">🌞 Status: Sunday Holiday</div>
+                        <div style="font-size: 1.4rem; font-weight: bold; color: #3498db; margin-bottom: 5px;"> Status: Sunday Holiday</div>
                         <div style="font-size: 1rem; color: #7f8c8d;">${data.message || 'It\'s Sunday — a weekend holiday! No attendance recorded.'}</div>
                     `;
                 } else {
                     emptyArea.innerHTML = `
-                        <div style="font-size: 1.4rem; font-weight: bold; color: #e74c3c; margin-bottom: 5px;">🔴 Status: Absent</div>
+                        <div style="font-size: 1.4rem; font-weight: bold; color: #e74c3c; margin-bottom: 5px;"> Status: Absent</div>
                         <div style="font-size: 1rem; color: #7f8c8d;">No attendance recordings found for ${data.date || selectedDate}.</div>
                     `;
                 }
@@ -206,33 +206,72 @@ function fetchAttendanceReport() {
             // Handle Badges
             const badgesDiv = document.getElementById('reportBadges');
             badgesDiv.innerHTML = '';
-            
-            if (data.flags.on_time) {
-                badgesDiv.innerHTML += '<span style="background:#2ecc71; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">On Time</span>';
+
+            // --- Mark In Badges ---
+            if (data.flags.early_entry) {
+                badgesDiv.innerHTML += '<span style="background:#3498db; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Early Entry</span>';
+            } else if (data.flags.on_time_entry) {
+                badgesDiv.innerHTML += '<span style="background:#2ecc71; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> On Time Entry</span>';
+            } else if (data.flags.late_entry) {
+                badgesDiv.innerHTML += '<span style="background:#e67e22; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Late Entry</span>';
             }
-            if (data.flags.late_entry) {
-                badgesDiv.innerHTML += '<span style="background:#f39c12; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Late Entry</span>';
+
+            // --- Break Out Badges ---
+            if (data.flags.early_break) {
+                badgesDiv.innerHTML += '<span style="background:#9b59b6; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Early Break</span>';
+            } else if (data.flags.on_time_break) {
+                badgesDiv.innerHTML += '<span style="background:#27ae60; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> On Time Break</span>';
+            } else if (data.flags.late_break) {
+                badgesDiv.innerHTML += '<span style="background:#2c3e50; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Late Break</span>';
             }
+
+            // --- Break In Badges ---
+            if (data.flags.long_break) {
+                badgesDiv.innerHTML += '<span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Long Break</span>';
+            } else if (data.flags.early_break_return) {
+                badgesDiv.innerHTML += '<span style="background:#1abc9c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Early Break Return</span>';
+            } else if (data.flags.on_time_break_return) {
+                badgesDiv.innerHTML += '<span style="background:#27ae60; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> On Time Break Return</span>';
+            } else if (data.flags.late_break_return) {
+                badgesDiv.innerHTML += '<span style="background:#e67e22; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Late Break Return</span>';
+            }
+
+            // --- Mark Out Badges ---
             if (data.flags.early_exit) {
-                badgesDiv.innerHTML += '<span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Early Exit</span>';
+                badgesDiv.innerHTML += '<span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Early Departure</span>';
+            } else if (data.flags.on_time_exit) {
+                badgesDiv.innerHTML += '<span style="background:#2ecc71; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> On Time Departure</span>';
+            } else if (data.flags.late_exit) {
+                badgesDiv.innerHTML += '<span style="background:#8e44ad; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Late Departure</span>';
             }
+
+            // --- Other Badges (kept as-is) ---
             if (data.flags.has_overtime) {
-                badgesDiv.innerHTML += '<span style="background:#3498db; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Overtime</span>';
+                badgesDiv.innerHTML += '<span style="background:#3498db; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Overtime</span>';
             }
             if (data.flags.incomplete_session) {
-                badgesDiv.innerHTML += '<span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Incomplete Session</span>';
+                badgesDiv.innerHTML += '<span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Incomplete Session</span>';
             }
             if (data.flags.forgot_break_in) {
-                badgesDiv.innerHTML += '<span style="background:#e67e22; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Forgot Break In</span>';
+                badgesDiv.innerHTML += '<span style="background:#e67e22; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Forgot Break In</span>';
             }
             if (data.flags.short_break) {
-                badgesDiv.innerHTML += '<span style="background:#f1c40f; color:black; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Short Break</span>';
+                badgesDiv.innerHTML += '<span style="background:#f1c40f; color:black; padding:4px 8px; border-radius:12px; font-size:0.8rem; margin-right:5px;"> Short Break</span>';
             }
-            if (data.flags.early_break) {
-                badgesDiv.innerHTML += '<span style="background:#8e44ad; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Early Break</span>';
+            if (data.flags.admin_approval) {
+                badgesDiv.innerHTML += '<span style="background:#e67e22; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; margin-right:5px;"> Pending Admin Approval</span>';
             }
-            if (data.flags.late_break) {
-                badgesDiv.innerHTML += '<span style="background:#2c3e50; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Late Break</span>';
+            if (data.flags.admin_approved) {
+                badgesDiv.innerHTML += '<span style="background:#2ecc71; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; margin-right:5px;"> Admin Approved</span>';
+            }
+
+            // --- Day Type Badge ---
+            if (data.flags.day_type) {
+                let dtBg = '#16a085';
+                if (data.flags.day_type === 'Full Day') dtBg = '#27ae60';
+                else if (data.flags.day_type === 'Half Day') dtBg = '#e67e22';
+                else if (data.flags.day_type === 'Short Day') dtBg = '#c0392b';
+                badgesDiv.innerHTML += `<span style="background:${dtBg}; color:white; padding:4px 12px; border-radius:12px; font-size:0.82rem; font-weight:700; margin-right:5px; border: 2px solid rgba(255,255,255,0.3);">${data.flags.day_type}</span>`;
             }
             
             emptyArea.style.display = 'none';
@@ -253,6 +292,7 @@ async function updateMonthlySummary() {
     const totalEl = document.getElementById('summaryTotal');
     const fullDayEl = document.getElementById('summaryFullDay');
     const halfDayEl = document.getElementById('summaryHalfDay');
+    const shortDayEl = document.getElementById('summaryShortDay');
     const percentEl = document.getElementById('summaryPercentage');
 
     try {
@@ -266,6 +306,7 @@ async function updateMonthlySummary() {
             totalEl.textContent = stats.total_working_days;
             fullDayEl.textContent = stats.full_day;
             halfDayEl.textContent = stats.half_day;
+            if (shortDayEl) shortDayEl.textContent = stats.short_day;
             percentEl.textContent = `${stats.percentage}%`;
         }
     } catch (error) {

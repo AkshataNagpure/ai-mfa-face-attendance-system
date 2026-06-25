@@ -27,15 +27,15 @@ def init_database():
             admin.set_password('admin123')
             db.session.add(admin)
             db.session.commit()
-            print("✓ Database initialized")
-            print("✓ Default admin created:")
+            print(" Database initialized")
+            print(" Default admin created:")
             print("  Username: admin")
             print("  Password: admin123")
             print("  PIN: 1234")
             print("\nPlease change the admin password after first login!")
         else:
-            print("✓ Database already initialized")
-            print("✓ Admin user already exists")
+            print(" Database already initialized")
+            print(" Admin user already exists")
 
 if __name__ == '__main__':
     init_database()
