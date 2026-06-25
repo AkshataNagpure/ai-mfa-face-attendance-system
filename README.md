@@ -1,133 +1,80 @@
-# 👤 AI-Based Smart Face Attendance System
+# AI-Based Smart Face Attendance & Multi-Factor Authentication System
 
-An advanced, premium-tier **AI-Based Smart Face Attendance & Multi-Factor Authentication (MFA)** application built using Python, Flask, DeepFace, SQLite, and Chart.js. This system replaces traditional attendance systems with biometric facial recognition, liveness/anti-spoofing verification, emotion tracking, automatic notifications, and an integrated AI chatbot companion.
+This is a Flask-based attendance system using facial recognition, geofencing, emotion tracking, and liveness detection.
 
----
+## ⚙️ Core System Logic
 
-## 🌟 Key Features
+### 1. Geofenced Boundaries
+The system validates employee location when marking attendance using the Haversine formula to compute distance.
+* **Designated Office Coordinates**: Latitude `19.98381430077873`, Longitude `73.75877028302833`.
+* **Allowed Distance Limit**: Maximum 500 meters. Attendance is blocked if the distance exceeds this limit.
 
-### 💻 Dashboards & Administration
-* **Admin Control Center**:
-  * Real-time metrics overview (Punctuality rate, present/absent ratios, and predictive analytics).
-  * Interactive **All Employees** list with search and detailed inspector modals.
-  * **Editable Employee Profiles**: Modify full name, username, email, department, mobile, and custom profile pictures dynamically.
-  * **Detailed Attendance Report Finder**: Check historical stats for any specific date with smart alerts for **Sunday Holidays** and **Not Registered** statuses (for dates before an employee joined).
-  * Outbound Email log verification interface.
-* **Employee Workspace**:
-  * Personalized profile details displaying biometric avatars side-by-side.
-  * Easy-to-use self-attendance marker (Clock In, Break Out, Break In, Clock Out) utilizing live camera feed.
-  * Weekly attendance progress tracking line charts and monthly summaries.
-  * Private history date viewer and interactive AI chatbot.
+### 2. Time-Based Action Status Brackets
+Every attendance event is classified into specific statuses based on arrival and departure times:
+* **Mark In**:
+  * Before 09:00 AM: `Early Entry`
+  * 09:00 AM – 09:15 AM: `on time entry`
+  * After 09:15 AM: `Late Entry` (marks overall status as 'late')
+* **Break Out**:
+  * Before 12:00 PM: `Early Break`
+  * 12:00 PM – 12:15 PM: `On time Break`
+  * After 12:15 PM: `Late Break`
+* **Break In**:
+  * Break duration > 1.0 hr: `Long Break`
+  * Before 01:00 PM (and <= 1hr): `early Break return`
+  * 01:00 PM – 01:15 PM: `On time Break retuen`
+  * After 01:15 PM: `late Break return`
+* **Mark Out**:
+  * Before 06:00 PM: `Early Departure`
+  * 06:00 PM – 06:15 PM: `on time Departure`
+  * After 06:15 PM: `Late Departure`
 
-### 🤖 AI-Biometrics & Analytics
-* **Biometric Face Verification**: Uses standard `VGG-Face` deep learning models for high-accuracy match checks against registered records.
-* **Anti-Spoofing Protection**: Built-in 2D liveness classification check to prevent attendance logging attempts using printed photographs or digital screens.
-* **Emotion Tracking**: Identifies current mood (Happy, Sad, Angry, Neutral, etc.) during attendance scanning and displays emotion frequencies via doughnut charts.
-* **TrackHub AI Assistant**: An embedded chatbot companion integrated into both dashboards to answer context-aware natural language queries about attendance history, policies, or daily aggregates.
+### 3. Net Hours & Overtime Rules
+* **Working Hours**: Calculated as Total Duration (Mark In to Mark Out) minus Actual Break Duration (Break Out to Break In).
+* **Weekday Schedule (Monday – Saturday)**:
+  * **Full Day**: Net hours $\ge$ 8.0 hours.
+  * **Half Day**: Net hours $\ge$ 4.0 hours and $<$ 8.0 hours.
+  * **Short Day**: Net hours $<$ 4.0 hours.
+* **Sunday Schedule**:
+  * All hours worked on Sunday are logged entirely as **Overtime hours** (working hours remain `0.0`).
 
-### 🔒 Security & Password Recovery
-* **Dual-Path Password Reset System**:
-  * **Employees**: Quick recovery via automatic secure email links.
-  * **Administrators**: Role-based MFA question, unique PIN validation, and fallback emergency Master Recovery Keys.
+### 4. Background Auto-Finalization Flow
+When the Admin Dashboard loads, incomplete sessions are finalized:
+* **Mark In only (No Break Out/In, No Mark Out)**: Status becomes `incomplete_session`, `admin_approval` with `pending` status.
+* **Mark In + Break Out only**: Status becomes `incomplete_session`. Approved as `full_day` if hours $\ge$ 8.0, `half_day` if $\ge$ 4.0, else `pending` admin approval.
+* **Mark In + Break Out + Break In (No Mark Out)**: Status becomes `incomplete_session`, `pending` admin approval.
 
----
+### 5. Biometrics & Spoof Detection
+* **Facial Matching**: Uses `face_recognition` (dlib) with a match distance tolerance of `0.45`.
+* **Liveness Assessment**: 
+  * DeepFace Quality Check
+  * Sharpness Variance (Laplacian filters)
+  * Light Reflective Glare (HSV channel standard deviation)
+  * OpenCV Blink Cascade
+* **Emotion Tracking**: Evaluates mood during each check-in/out event via DeepFace, recording it in the database.
 
-## 🛠️ Technology Stack
+### 6. Dashboards Overview
 
-* **Backend**: Python 3.x, Flask, SQLAlchemy (SQLite database)
-* **Frontend**: HTML5, Vanilla CSS3 (Custom Glassmorphism layout), Vanilla JavaScript
-* **AI & Computer Vision**: OpenCV (`cv2`), DeepFace (`VGG-Face`, `Emotion`), Face Recognition
-* **Charts & Analytics**: Chart.js
-* **Mailing**: Flask-Mail
+**Admin Dashboard:**
+* **Real-time Statistics:** Calculates and displays today's present/absent counts, overall punctuality trends, and aggregate emotion metrics categorized by department.
+* **Employee Management:** Interface to register employees (capturing initial biometric face templates and profile images), update user details, or delete accounts.
+* **Pending Approvals Queue:** Allows administrators to manually override incomplete sessions triggered by missing check-outs, assigning `full_day`, `half_day`, or `absent`.
+* **Attendance Reports:** Lookup tool to fetch historic attendance records and view individual employee performance over time.
 
----
+**Employee Dashboard:**
+* **Biometric Attendance Terminal:** Live camera interface connecting to the `/api/mark_attendance` endpoint, handling spoof detection and geofencing checks before committing timestamps.
+* **Personal Analytics:** Tracks historical Full, Half, and Short day counts, overtime hours, and a 7-day personal emotion trend summary.
+* **Email Verification Logs:** Queries the internal `email_report` SQL View to show a timeline of dispatched attendance alerts to the user's registered email.
 
-## 📁 Repository Structure
+### 7. TrackHub AI Chatbot & Predictive Analytics
+* **TrackHub**: Embedded dashboard chatbot for querying attendance history, working hours, and analytics (handled by `analytics.py`).
+* **Predictive Absences**: Random Forest logic (in `analytics.py`) flags employees at high risk of absenteeism over the next 7 days based on recent data.
 
-```
-AI-MFA-System/
-│
-├── instance/                  # SQLite active database
-├── face_encodings/            # Saved biometric facial signature files (.npy)
-├── uploads/                   # Securely stored employee profile and face photographs
-│
-├── templates/                 # Jinja2 HTML Views
-│   ├── base.html              # Central layout & global footer
-│   ├── home.html              # Main welcome / portal directory
-│   ├── login.html             # Multi-role authentication entrypoint
-│   ├── register_employee.html # Employee onboarding form with facial enrollment
-│   ├── admin_dashboard.html   # Main control page for administrators
-│   └── employee_dashboard.html# Main workspace page for employees
-│
-├── static/
-│   ├── css/style.css          # Core custom styles (Dark Theme/Glassmorphic accents)
-│   └── js/
-│       ├── admin_dashboard.js # Admin interactive widgets and AJAX forms
-│       ├── employee_dashboard.js # Employee camera hooks & charts
-│       ├── home.js            # General homepage animations
-│       └── register_employee.js # Biometric registration frame
-│
-├── app.py                     # Main application entry point & DeepFace caching
-├── routes.py                  # Core backend endpoints, APIs, and route structures
-├── models.py                  # SQLAlchemy Database schema definitions
-├── config.py                  # Environment config parser
-├── email_service.py           # Email dispatch helper functions
-├── analytics.py               # AI TrackHub chatbot logic & predictive pipelines
-├── emotion_detection.py       # DeepFace emotion recognition framework
-├── spoof_detection.py         # Anti-spoofing/Liveness assessment module
-├── face_recognition_module.py # Face extraction & similarity matching
-├── requirements.txt           # Python packages listing
-└── .env                       # App secrets & SMTP configuration
-```
+### 8. MFA Recovery
+Administrators use MFA recovery via Security Questions, PINs, or a Master Recovery Key (`ADMIN-MFA-RECOVERY-KEY-2026`). Employees use email verification links.
 
----
-
-## ⚙️ Installation & Seeding
-
-### 1. Prerequisite Packages
-Make sure you have CMake and C++ Build Tools installed on your OS for `face_recognition` compilation, then clone the repository:
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Configure Environment `.env`
-Create a `.env` file in the root directory and specify your SMTP server, database settings, and Flask keys:
-```env
-FLASK_APP=app.py
-FLASK_ENV=development
-SECRET_KEY=your_flask_secret_key_here
-
-# Flask-Mail SMTP Settings
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USE_TLS=True
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
-```
-
-### 3. Initialize & Seed Database
-Initialize database tables, establish relations, and seed the default administrator credentials along with recovery PINs:
-```bash
-python init_db.py
-```
-* Default Admin Username: `admin`
-* Default Admin Password: `Admin@123`
-* Admin Screte PIN: `ADMIN-MFA-RECOVERY-KEY-2026`
-
----
-
-## 🚀 Running the System
-
-Start the Flask server locally:
-```bash
-python app.py
-```
-The server will automatically cash VGG-Face and Emotion recognition models and run on:
-👉 **[http://localhost:5000](http://localhost:5000)**
-
----
-
-## 📜 License
-This application is distributed under the terms of the **MIT License**.
-
-© 2026 AI-Based Smart Face Attendance System. All rights reserved.
+## 📁 Setup & Run
+1. Install dependencies: `pip install -r requirements.txt`
+2. Create `.env` file with `SECRET_KEY`, `MAIL_SERVER`, `MAIL_USERNAME`, `MAIL_PASSWORD`, etc.
+3. Initialize the database: `python init_db.py` (Default Admin: `admin` / `admin123`)
+4. Start application: `python app.py` (Runs on `http://localhost:5000`)
