@@ -1002,6 +1002,26 @@ def register_routes(app):
             Attendance.work_type.is_(None)
         ).all()
         for att in unclassified:
+            # If working_hours was deferred, calculate it now
+            if not att.working_hours:
+                total_mins = (att.mark_out_time - att.mark_in_time).total_seconds() / 60.0
+                deduction_mins = 0.0
+                if att.break_out_time and att.break_in_time:
+                    deduction_mins = (att.break_in_time - att.break_out_time).total_seconds() / 60.0
+                net_working_mins = max(0, total_mins - deduction_mins)
+                net_working_hours = net_working_mins / 60.0
+
+                if att.date.weekday() == 6:  # Sunday
+                    att.working_hours = 0.0
+                    att.overtime_hours = net_working_hours
+                else:
+                    if net_working_hours > 8.0:
+                        att.working_hours = 8.0
+                        att.overtime_hours = net_working_hours - 8.0
+                    else:
+                        att.working_hours = net_working_hours
+                        att.overtime_hours = 0.0
+
             wh = att.working_hours or 0.0
             if wh >= 8.0:
                 att.work_type = 'full_day'
@@ -1156,33 +1176,12 @@ def register_routes(app):
             if not att or not att.mark_in_time or att.status == 'absent':
                 continue
             
-            if att.date == today:
-                continue
-
-            # Short Day logic:
-            is_short = (
-                att.mark_in_time is not None and
-                att.mark_out_time is not None and
-                att.break_out_time is not None and
-                att.break_in_time is not None and
-                (att.working_hours or 0.0) < 4.0
-            )
-            
-            if is_short:
+            if att.work_type == 'full_day':
+                total_full_day += 1
+            elif att.work_type == 'half_day':
+                total_half_day += 1
+            elif att.work_type == 'short_day':
                 total_short_day += 1
-            elif att.approval_status == 'approved':
-                if att.work_type == 'full_day':
-                    total_full_day += 1
-                elif att.work_type == 'half_day':
-                    total_half_day += 1
-            elif att.work_type == 'admin_approval' and att.approval_status == 'pending':
-                pass
-            else:
-                wh = att.working_hours or 0.0
-                if wh >= 8.0:
-                    total_full_day += 1
-                else:
-                    total_half_day += 1
         
         valid_attendances = [att for att in all_attendances if att]
         if valid_attendances:
@@ -1471,33 +1470,12 @@ def register_routes(app):
             if not att or not att.mark_in_time or att.status == 'absent':
                 continue
             
-            if att.date == today:
-                continue
-
-            # Short Day logic:
-            is_short = (
-                att.mark_in_time is not None and
-                att.mark_out_time is not None and
-                att.break_out_time is not None and
-                att.break_in_time is not None and
-                (att.working_hours or 0.0) < 4.0
-            )
-            
-            if is_short:
+            if att.work_type == 'full_day':
+                total_full_day += 1
+            elif att.work_type == 'half_day':
+                total_half_day += 1
+            elif att.work_type == 'short_day':
                 total_short_day += 1
-            elif att.approval_status == 'approved':
-                if att.work_type == 'full_day':
-                    total_full_day += 1
-                elif att.work_type == 'half_day':
-                    total_half_day += 1
-            elif att.work_type == 'admin_approval' and att.approval_status == 'pending':
-                pass
-            else:
-                wh = att.working_hours or 0.0
-                if wh >= 8.0:
-                    total_full_day += 1
-                else:
-                    total_half_day += 1
 
         # Profile image
         image_url = None
@@ -1588,32 +1566,12 @@ def register_routes(app):
             total_working_hours += working_hours
             total_overtime_hours += overtime
             
-            if att.date == today:
-                continue
-
-            # Short Day logic:
-            is_short = (
-                att.mark_in_time is not None and
-                att.mark_out_time is not None and
-                att.break_out_time is not None and
-                att.break_in_time is not None and
-                working_hours < 4.0
-            )
-
-            if is_short:
+            if att.work_type == 'full_day':
+                full_day += 1
+            elif att.work_type == 'half_day':
+                half_day += 1
+            elif att.work_type == 'short_day':
                 short_day += 1
-            elif att.approval_status == 'approved':
-                if att.work_type == 'full_day':
-                    full_day += 1
-                elif att.work_type == 'half_day':
-                    half_day += 1
-            elif att.work_type == 'admin_approval' and att.approval_status == 'pending':
-                pass
-            else:
-                if working_hours >= 8.0:
-                    full_day += 1
-                else:
-                    half_day += 1
 
         attendance_percentage = (present_count / total_working_days * 100) if total_working_days > 0 else 0
 
@@ -2131,10 +2089,13 @@ def register_routes(app):
                 attendance.mark_out_time = datetime.now()
                 attendance.mark_out_emotion = detected_emotion
                 
+                is_missing_time = False
+
                 # Auto-Close Break if needed
                 if attendance.break_out_time and not attendance.break_in_time:
                     attendance.break_in_time = attendance.mark_out_time
                     attendance.break_in_auto_generated = True
+                    is_missing_time = True
                     # Calculate status for the auto-closed break return
                     _bi_h = attendance.break_in_time.hour
                     _bi_m = attendance.break_in_time.minute
@@ -2151,38 +2112,47 @@ def register_routes(app):
                         else:
                             attendance.break_in_status = "late Break return"
 
-                # Calculate Net Working Hours
-                total_mins = (attendance.mark_out_time - attendance.mark_in_time).total_seconds() / 60.0
-                deduction_mins = 0.0
-
-                if attendance.break_out_time and attendance.break_in_time:
-                    # EXACT actual break duration ONLY, no minimum 60 mins
-                    deduction_mins = (attendance.break_in_time - attendance.break_out_time).total_seconds() / 60.0
-                else:
+                if not is_missing_time:
+                    # Calculate Net Working Hours immediately since sequence is correct
+                    total_mins = (attendance.mark_out_time - attendance.mark_in_time).total_seconds() / 60.0
                     deduction_mins = 0.0
-                
-                net_working_mins = max(0, total_mins - deduction_mins)
-                net_working_hours = net_working_mins / 60.0
-
-                # Overtime
-                if today.weekday() == 6:  # Sunday: all hours = overtime
-                    attendance.working_hours = 0.0
-                    attendance.overtime_hours = net_working_hours
-                else:
-                    if net_working_hours > 8.0:
-                        attendance.working_hours = 8.0
-                        attendance.overtime_hours = net_working_hours - 8.0
+    
+                    if attendance.break_out_time and attendance.break_in_time:
+                        # EXACT actual break duration ONLY, no minimum 60 mins
+                        deduction_mins = (attendance.break_in_time - attendance.break_out_time).total_seconds() / 60.0
                     else:
-                        attendance.working_hours = net_working_hours
-                        attendance.overtime_hours = 0.0
-
-                # Work Type Classification for completed sessions
-                # Classification is deferred until 12 AM (auto_finalize_attendance)
-                if net_working_hours < 4.0:
+                        deduction_mins = 0.0
+                    
+                    net_working_mins = max(0, total_mins - deduction_mins)
+                    net_working_hours = net_working_mins / 60.0
+    
+                    # Overtime
+                    if today.weekday() == 6:  # Sunday: all hours = overtime
+                        attendance.working_hours = 0.0
+                        attendance.overtime_hours = net_working_hours
+                    else:
+                        if net_working_hours > 8.0:
+                            attendance.working_hours = 8.0
+                            attendance.overtime_hours = net_working_hours - 8.0
+                        else:
+                            attendance.working_hours = net_working_hours
+                            attendance.overtime_hours = 0.0
+    
+                    # Work Type Classification for completed sessions
+                    if net_working_hours >= 8.0:
+                        attendance.work_type = 'full_day'
+                    elif net_working_hours >= 4.0:
+                        attendance.work_type = 'half_day'
+                    else:
+                        # Less than 4 hours worked => short day (status stays 'present')
+                        attendance.work_type = 'short_day'
+                        attendance.status = 'present'
+                else:
+                    # Missing time detected. Defer classification and hours computation to 12 AM.
                     attendance.status = 'present'
 
                 current_time = attendance.mark_out_time.strftime('%I:%M %p')
-                status_label = "Present"
+                status_label = (attendance.work_type or 'Present').replace("_", " ").title()
 
                 # Mark Out departure status
                 _mo_h = attendance.mark_out_time.hour
