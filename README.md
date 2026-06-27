@@ -32,16 +32,17 @@ Every attendance event is classified into specific statuses based on arrival and
 ### 3. Net Hours & Overtime Rules
 * **Working Hours**: Calculated as Total Duration (Mark In to Mark Out) minus Actual Break Duration (Break Out to Break In).
 * **Weekday Schedule (Monday – Saturday)**:
-  * **Full Day**: Net hours $\ge$ 8.0 hours.
-  * **Half Day**: Net hours $\ge$ 4.0 hours and $<$ 8.0 hours.
-  * **Short Day**: Net hours $<$ 4.0 hours.
+  * **Full Day**: Net hours >= 8.0 hours.
+  * **Half Day**: 7.99 hours <= Net hours >= 4.0 hours.
+  * **Short Day**: Net hours < 4.0 hours.
+* **overtime**: after 8.0 hours all are treated as overtime.
 * **Sunday Schedule**:
   * All hours worked on Sunday are logged entirely as **Overtime hours** (working hours remain `0.0`).
 
 ### 4. Background Auto-Finalization Flow
 When the Admin Dashboard loads, incomplete sessions are finalized:
 * **Mark In only (No Break Out/In, No Mark Out)**: Status becomes `incomplete_session`, `admin_approval` with `pending` status.
-* **Mark In + Break Out only**: Status becomes `incomplete_session`. Approved as `full_day` if hours $\ge$ 8.0, `half_day` if $\ge$ 4.0, else `pending` admin approval.
+* **Mark In + Break Out only**: Status becomes `incomplete_session`, `admin_approval` with `pending` status.
 * **Mark In + Break Out + Break In (No Mark Out)**: Status becomes `incomplete_session`, `pending` admin approval.
 
 ### 5. Biometrics & Spoof Detection
