@@ -742,7 +742,7 @@ async function fetchEmployeeDetailedReport() {
                 confirmCheck.checked = false;
                 confirmCheck.onchange = function() {
                     const enabled = this.checked;
-                    ['btnApproveFull', 'btnApproveHalf', 'btnMarkAbsent'].forEach(id => {
+                    ['btnApproveFull', 'btnApproveHalf', 'btnApproveShort', 'btnMarkAbsent'].forEach(id => {
                         const btn = document.getElementById(id);
                         if (btn) {
                             btn.disabled = !enabled;
@@ -753,7 +753,7 @@ async function fetchEmployeeDetailedReport() {
                 };
             }
             // Reset all buttons to disabled initially
-            ['btnApproveFull', 'btnApproveHalf', 'btnMarkAbsent'].forEach(id => {
+            ['btnApproveFull', 'btnApproveHalf', 'btnApproveShort', 'btnMarkAbsent'].forEach(id => {
                 const btn = document.getElementById(id);
                 if (btn) {
                     btn.disabled = true;

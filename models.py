@@ -2,8 +2,39 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+from sqlalchemy import TypeDecorator
 
 db = SQLAlchemy()
+
+class SafeDateTime(TypeDecorator):
+    impl = db.String(50)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            # Write standard ISO format with space separator
+            return value.strftime('%Y-%m-%d %H:%M:%S.%f')
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value
+        val_str = str(value).strip()
+        # Try parsing various formats
+        for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %I:%M:%S.%f %p', '%Y-%m-%d %I:%M:%S %p'):
+            try:
+                return datetime.strptime(val_str, fmt)
+            except ValueError:
+                continue
+        # Fallback to isoformat
+        try:
+            return datetime.fromisoformat(val_str)
+        except ValueError:
+            return None
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -16,14 +47,13 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
     profile_pic = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(SafeDateTime, default=datetime.utcnow)
     
-    # Forgot Password Fields
     security_question = db.Column(db.String(255))
     security_answer_hash = db.Column(db.String(255))
     admin_pin_hash = db.Column(db.String(255))
     reset_token = db.Column(db.String(100))
-    reset_token_expiry = db.Column(db.DateTime)
+    reset_token_expiry = db.Column(SafeDateTime)
     secret_key = db.Column(db.String(100), unique=True, nullable=True)
     
     # Relationships
@@ -44,10 +74,10 @@ class Attendance(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     username = db.Column(db.String(80))
     date = db.Column(db.Date, nullable=False)
-    mark_in_time = db.Column(db.DateTime)
-    break_out_time = db.Column(db.DateTime)
-    break_in_time = db.Column(db.DateTime)
-    mark_out_time = db.Column(db.DateTime)
+    mark_in_time = db.Column(SafeDateTime)
+    break_out_time = db.Column(SafeDateTime)
+    break_in_time = db.Column(SafeDateTime)
+    mark_out_time = db.Column(SafeDateTime)
     status = db.Column(db.String(20), default='present')  # present, absent, late
     work_type = db.Column(db.String(20)) # full_day, half_day
     # Per-event emotion tracking
@@ -67,14 +97,14 @@ class Attendance(db.Model):
     overtime_recorded = db.Column(db.Integer, default=0)
     approval_status = db.Column(db.String(20), nullable=True, default=None)
     break_in_auto_generated = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(SafeDateTime, default=datetime.utcnow)
     
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='unique_user_date'),)
 
 class IdempotencyLog(db.Model):
     request_id = db.Column(db.String(36), primary_key=True)
     response_payload = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(SafeDateTime, default=datetime.utcnow)
 
 class FaceEncoding(db.Model):
     __tablename__ = 'face_encodings'
@@ -82,7 +112,7 @@ class FaceEncoding(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     encoding_path = db.Column(db.String(255), nullable=False)
     image_path = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(SafeDateTime, default=datetime.utcnow)
 
 def create_database_views(database):
     """Create reporting database views if they do not exist."""
@@ -99,43 +129,43 @@ def create_database_views(database):
             SELECT 
                 u.name AS employee_name,
                 u.email AS email_address,
-                'Marked In Successfully - ' || datetime(a.mark_in_time) AS subject,
+                'Marked In Successfully - ' || coalesce(datetime(a.mark_in_time), a.mark_in_time) AS subject,
                 'sent' AS status,
                 a.mark_in_time AS sent_time
             FROM attendance a
             JOIN user u ON a.user_id = u.id
             WHERE a.mark_in_time IS NOT NULL
-
+ 
             UNION ALL
-
+ 
             SELECT 
                 u.name AS employee_name,
                 u.email AS email_address,
-                'Break Out Successfully - ' || datetime(a.break_out_time) AS subject,
+                'Break Out Successfully - ' || coalesce(datetime(a.break_out_time), a.break_out_time) AS subject,
                 'sent' AS status,
                 a.break_out_time AS sent_time
             FROM attendance a
             JOIN user u ON a.user_id = u.id
             WHERE a.break_out_time IS NOT NULL
-
+ 
             UNION ALL
-
+ 
             SELECT 
                 u.name AS employee_name,
                 u.email AS email_address,
-                'Break In Successfully - ' || datetime(a.break_in_time) AS subject,
+                'Break In Successfully - ' || coalesce(datetime(a.break_in_time), a.break_in_time) AS subject,
                 'sent' AS status,
                 a.break_in_time AS sent_time
             FROM attendance a
             JOIN user u ON a.user_id = u.id
             WHERE a.break_in_time IS NOT NULL
-
+ 
             UNION ALL
-
+ 
             SELECT 
                 u.name AS employee_name,
                 u.email AS email_address,
-                'Marked Out Successfully - ' || datetime(a.mark_out_time) AS subject,
+                'Marked Out Successfully - ' || coalesce(datetime(a.mark_out_time), a.mark_out_time) AS subject,
                 'sent' AS status,
                 a.mark_out_time AS sent_time
             FROM attendance a

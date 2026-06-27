@@ -2,7 +2,7 @@
 
 This is a Flask-based attendance system using facial recognition, geofencing, emotion tracking, and liveness detection.
 
-## ⚙️ Core System Logic
+##  Core System Logic
 
 ### 1. Geofenced Boundaries
 The system validates employee location when marking attendance using the Haversine formula to compute distance.
@@ -14,7 +14,7 @@ Every attendance event is classified into specific statuses based on arrival and
 * **Mark In**:
   * Before 09:00 AM: `Early Entry`
   * 09:00 AM – 09:15 AM: `on time entry`
-  * After 09:15 AM: `Late Entry` (marks overall status as 'late')
+  * After 09:15 AM: `Late Entry` 
 * **Break Out**:
   * Before 12:00 PM: `Early Break`
   * 12:00 PM – 12:15 PM: `On time Break`
@@ -73,7 +73,7 @@ When the Admin Dashboard loads, incomplete sessions are finalized:
 ### 8. MFA Recovery
 Administrators use MFA recovery via Security Questions, PINs, or a Master Recovery Key (`ADMIN-MFA-RECOVERY-KEY-2026`). Employees use email verification links.
 
-## 📁 Setup & Run
+##  Setup & Run
 1. Install dependencies: `pip install -r requirements.txt`
 2. Create `.env` file with `SECRET_KEY`, `MAIL_SERVER`, `MAIL_USERNAME`, `MAIL_PASSWORD`, etc.
 3. Initialize the database: `python init_db.py` (Default Admin: `admin` / `admin123`)

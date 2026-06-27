@@ -31,7 +31,7 @@ class PredictiveAnalytics:
                 ).all()
                 
                 if not attendances:
-                    # NEW LOGIC: Employees with no records in past 30 days get 100% risk
+                    # Employees with no records in past 30 days get 100% risk
                     predictions.append({
                         'employee_id': employee.id,
                         'employee_name': employee.name,
@@ -153,7 +153,7 @@ class EmployeeInsights:
             ).all()
             
             if not attendances:
-                # NEW LOGIC: Include all employees even with no records
+                # Include all employees even with no records
                 analytics.append({
                     'employee_id': employee.id,
                     'employee_name': employee.name,

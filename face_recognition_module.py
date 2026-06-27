@@ -12,7 +12,6 @@ class FaceRecognitionSystem:
         self.face_encodings_folder = 'face_encodings'
         os.makedirs(self.face_encodings_folder, exist_ok=True)
 
-    # ---------- HELPER FUNCTIONS ----------
 
     def load_face_encodings(self, user_id):
         """Load saved encodings for a user"""
@@ -58,7 +57,7 @@ class FaceRecognitionSystem:
             return []
 
     def save_face_encoding(self, user_id, encoding, image_path):
-        """Save a single face encoding"""
+        """Save face encoding"""
         os.makedirs(self.face_encodings_folder, exist_ok=True)
         count = FaceEncoding.query.filter_by(user_id=user_id).count()
         encoding_file = os.path.join(self.face_encodings_folder, f"user_{user_id}_{count}.pkl")
