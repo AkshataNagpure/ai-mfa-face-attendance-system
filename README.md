@@ -6,7 +6,7 @@ This is a Flask-based attendance system using facial recognition, geofencing, em
 
 ### 1. Geofenced Boundaries
 The system validates employee location when marking attendance using the Haversine formula to compute distance.
-* **Designated Office Coordinates**: Latitude `19.98381430077873`, Longitude `73.75877028302833`.
+* **Designated Office Coordinates**: Latitude `20.004549671968228`, Longitude `73.75789772498837`.
 * **Allowed Distance Limit**: Maximum 500 meters. Attendance is blocked if the distance exceeds this limit.
 
 ### 2. Time-Based Action Status Brackets

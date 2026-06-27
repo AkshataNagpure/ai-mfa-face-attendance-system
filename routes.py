@@ -1700,8 +1700,8 @@ def register_routes(app):
                 return jsonify({'success': False, 'message': 'Invalid location format.'})
 
             # Fixed office coordinates
-            OFFICE_LAT = 19.98381430077873
-            OFFICE_LON = 73.75877028302833
+            OFFICE_LAT = 20.004549671968228
+            OFFICE_LON = 73.75789772498837
             MAX_DISTANCE_METERS = 500.0
 
             # Haversine formula to compute distance in meters
